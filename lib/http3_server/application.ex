@@ -7,9 +7,13 @@ defmodule Http3Server.Application do
 
   @impl true
   def start(_type, _args) do
+    options = Application.fetch_env!(:http3_server, :options)
+
     children = [
       # Starts a worker by calling: Http3Server.Worker.start_link(arg)
       # {Http3Server.Worker, arg}
+      {Wtransport.Supervisor, options},
+      PubSub
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
