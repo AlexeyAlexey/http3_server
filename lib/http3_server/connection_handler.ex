@@ -14,6 +14,7 @@ defmodule Http3Server.ConnectionHandler do
     case AuthUserConnection.auth(session) |> IO.inspect() do
       {:ok, %{user_id: user_id, room_id: room_id, stream_type: stream_type}} ->
         state = %{user_id: user_id, room_id: room_id, stream_type: stream_type}
+
         Logger.info("user connecting: #{user_id} room_id: #{room_id} stream_type: #{stream_type}")
 
         {:continue, state}

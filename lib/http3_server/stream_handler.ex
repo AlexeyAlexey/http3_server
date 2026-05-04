@@ -1,5 +1,6 @@
 defmodule Http3Server.StreamHandler do
   use Wtransport.StreamHandler
+  require Logger
 
   alias Wtransport.Stream
 
@@ -9,7 +10,7 @@ defmodule Http3Server.StreamHandler do
   def handle_stream(%Stream{} = _stream, conn_state) do
     state = conn_state
 
-    IO.inspect("#{state.stream_type}/#{state.room_id}", label: "11111111111111111111111")
+    Logger.info("#{state.stream_type}/#{state.room_id}")
     PubSub.subscribe(self(), "#{state.stream_type}/#{state.room_id}")
 
     {:continue, state}

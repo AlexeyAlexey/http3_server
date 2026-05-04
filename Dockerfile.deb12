@@ -13,7 +13,7 @@
 #
 # elixir:1.19.5-erlang-28.4.2-debian-bookworm-slim is a local custom image
 # look at https://github.com/AlexeyAlexey/debian-bookworm-slim-elixir-1.19.5-erlang-28.4.2
-# docker build -f Dockerfile.deb12 -t video_conference .
+# docker build -f Dockerfile.deb12 -t http3_server .
 
 ARG BUILDER_IMAGE="docker.io/hexpm/elixir:1.19.5-erlang-28.4.2-debian-bookworm-slim"
 ARG RUNNER_IMAGE="docker.io/debian:bookworm-slim"

@@ -9,7 +9,8 @@ defmodule Http3Server.AuthUserConnection do
   def auth(%Session{path: path}) when is_binary(path) do
     uri = URI.parse(path)
     params = URI.decode_query(uri.query)
-    Logger.info(IO.inspect(params))
+
+    Logger.info("params: #{inspect(params)}")
 
     with {:ok, claims} <- Http3Server.AuthToken.verify_and_validate(params["auth_token"]) do
       stream_type =
