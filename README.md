@@ -1,8 +1,7 @@
 # Http3Server
 
-It is a stream server
+It is a stream server. I use it for [Video Conference app](https://github.com/AlexeyAlexey/video_conference)
 
-look at: 
 
 ```rust cargo``` is required
 
