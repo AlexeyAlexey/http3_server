@@ -51,35 +51,9 @@ defmodule Http3Server.StreamHandler do
 
   @impl true
   def handle_info({:subscribed, from, data}, {%Stream{} = stream, state}) do
-    #    const view = new DataView(payload);
-    # //   const participantId = view.getUint32(0, false);
-    # //   const seq = view.getUint32(4, false);
-    # //   const type = view.getUint32(8, false);
-    # //   const key = view.getUint32(12, false);
-    # //   // const ts = view.getUint32(16, false);
-    # //   const ts = view.getBigUint64(16, false);
-    # //   const byteLength = view.getUint32(32, false);
-
-    # //   const videoChunk = new Uint8Array(payload, 36, byteLength);
-
-    # //   // console.log(`participantId: #${participantId}, chunkCount: ${chunkCount}; size: ${videoChunk.byteLength} byte`);
-
     if from != self() do
-      # IO.inspect(data)
-
-      # <<participant_id::32, seq::32, type::32, key::32, ts::64, length::32, binary_blob::binary>> =
-      #   data
-
-      # IO.inspect([participant_id, seq, type, key, ts, length, byte_size(data)],
-      #   label: "ddddddddddddddddddddddddd"
-      # )
-
       :ok = Stream.send(stream, data)
     end
-
-    # IO.inspect(data, label: "subscribed")
-
-    # :ok = Stream.send(stream, data)
 
     {:noreply, {stream, state}}
   end
