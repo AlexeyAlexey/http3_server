@@ -1,5 +1,9 @@
 import Config
 
+config :logger, :default_formatter,
+  format: "[$level] $metadata $message ",
+  metadata: [:error_code, :file, :line]
+
 if System.fetch_env!("MIX_ENV") == "dev" do
   config :http3_server, :options,
     host: System.fetch_env!("HOST"),

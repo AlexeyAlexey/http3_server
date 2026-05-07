@@ -19,10 +19,6 @@ defmodule Http3Server.StreamHandler do
   @impl Wtransport.StreamHandler
   def handle_data(data, %Stream{} = stream, state) do
     if stream.stream_type == :bi do
-      # :ok = Stream.send(stream, data)
-
-      # PubSub.subscribe(self(), room_id)
-
       PubSub.publish("#{state.stream_type}/#{state.room_id}", {:subscribed, self(), data})
     end
 
@@ -31,6 +27,8 @@ defmodule Http3Server.StreamHandler do
 
   @impl Wtransport.StreamHandler
   def handle_close(%Stream{} = stream, state) do
+    Logger.info("stream type: #{inspect(stream.stream_type)} state: #{inspect(state)}")
+
     case stream.stream_type do
       :bi -> {:continue, state}
       :uni -> :close
@@ -38,7 +36,8 @@ defmodule Http3Server.StreamHandler do
   end
 
   @impl Wtransport.StreamHandler
-  def handle_error(_reason, %Stream{} = _stream, _state) do
+  def handle_error(reason, %Stream{} = _stream, state) do
+    Logger.error("reason: #{inspect(reason)} state: #{inspect(state)}")
     :ok
   end
 
