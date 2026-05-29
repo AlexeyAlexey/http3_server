@@ -1,9 +1,5 @@
 import Config
 
-config :logger, :default_formatter,
-  format: "[$level] $metadata $message ",
-  metadata: [:error_code, :file, :line]
-
 if System.fetch_env!("MIX_ENV") == "dev" do
   config :http3_server, :options,
     host: System.fetch_env!("HOST"),
@@ -12,9 +8,9 @@ if System.fetch_env!("MIX_ENV") == "dev" do
     keyfile: System.fetch_env!("SSL_KEY_PATH"),
     connection_handler: Http3Server.ConnectionHandler,
     stream_handler: Http3Server.StreamHandler,
-    log_network_data: true,
-    # config :logger,
+    # log_network_data: true,
     level: :all,
+    level: :error,
     default_formatter: [
       format: "$time ( $metadata) [$level] $message\n",
       metadata: [:mfa, :line]
@@ -38,4 +34,8 @@ else
     ]
 
   config :joken, default_signer: System.fetch_env!("JWT_SECRET")
+
+  config :logger, :default_formatter,
+    format: "[$level] $metadata $message ",
+    metadata: [:error_code, :file, :line]
 end

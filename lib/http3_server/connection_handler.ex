@@ -6,16 +6,23 @@ defmodule Http3Server.ConnectionHandler do
   alias Wtransport.Session
   alias Wtransport.Connection
   alias Http3Server.AuthUserConnection
+  alias Http3Server.ConnectionHandlerErrorParser
+  alias Http3Server.PhoneCallManager
 
   # ConnectionHandler specific callbacks
 
   @impl Wtransport.ConnectionHandler
   def handle_session(%Session{} = session) do
-    case AuthUserConnection.auth(session) |> IO.inspect() do
+    case AuthUserConnection.auth(session) do
       {:ok, %{user_id: user_id, room_id: room_id, stream_type: stream_type}} ->
         state = %{user_id: user_id, room_id: room_id, stream_type: stream_type}
 
         Logger.info("user connecting: #{user_id} room_id: #{room_id} stream_type: #{stream_type}")
+
+        {:continue, state}
+
+      {:ok, %{from: from, to: to, direction: direction, stream_type: stream_type, type: type}} ->
+        state = %{from: from, to: to, direction: direction, stream_type: stream_type, type: type}
 
         {:continue, state}
 
@@ -45,9 +52,24 @@ defmodule Http3Server.ConnectionHandler do
 
   @impl Wtransport.ConnectionHandler
   def handle_error(reason, %Connection{} = _connection, state) do
-    Logger.error(
-      "participant_id: #{state[:user_id]} room_id: #{state[:roo_id]} reason: #{inspect(reason)}"
-    )
+    ConnectionHandlerErrorParser.parse(reason)
+    |> case do
+      "user_ended_call" ->
+        Logger.info(
+          "user_ended_call #{state |> Map.take([:direction, :from, :to, :type, :stream_type]) |> inspect()} reason: #{inspect(reason)}"
+        )
+
+        state
+        |> Map.put(:reason, "user_ended_call")
+        |> PhoneCallManager.user_ended_call()
+
+      _ ->
+        Logger.error("state: #{inspect(state)} reason: #{inspect(reason)}")
+
+        nil
+    end
+
+    # state: %{type: "phone_call", to: 1234, from: 123, direction: "outcome", stream_type: "audio"} reason: "connection closed by peer: userEndCall (code 0)"
 
     :ok
   end

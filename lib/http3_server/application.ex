@@ -12,8 +12,14 @@ defmodule Http3Server.Application do
     children = [
       # Starts a worker by calling: Http3Server.Worker.start_link(arg)
       # {Http3Server.Worker, arg}
+      {Registry, name: AudioPhoneCallManager, keys: :unique},
+      {Registry, name: VideoPhoneCallManager, keys: :unique},
       {Wtransport.Supervisor, options},
-      PubSub
+      PubSub,
+      {DynamicSupervisor,
+       strategy: :one_for_one, name: Http3Server.AudioPhoneCallManagerSupervisor},
+      {DynamicSupervisor,
+       strategy: :one_for_one, name: Http3Server.VideoPhoneCallManagerSupervisor}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

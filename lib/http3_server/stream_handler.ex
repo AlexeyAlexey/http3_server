@@ -3,13 +3,45 @@ defmodule Http3Server.StreamHandler do
   require Logger
 
   alias Wtransport.Stream
+  alias Http3Server.PhoneCallManager
 
   # StreamHandler specific callbacks
 
   @impl Wtransport.StreamHandler
-  def handle_stream(%Stream{} = _stream, conn_state) do
-    state = conn_state
+  def handle_stream(
+        %Stream{} = _stream,
+        %{
+          from: from,
+          to: to,
+          direction: direction,
+          stream_type: stream_type,
+          type: "phone_call" = type
+        } =
+          state
+      ) do
+    Logger.info(
+      "direction: #{direction}; #{state.stream_type}/phone_call/#{state.from}/#{state.to}"
+    )
 
+    PubSub.subscribe(self(), "#{stream_type}/phone_call/#{from}/#{to}")
+
+    PhoneCallManager.connect(self(), %{
+      from: from,
+      to: to,
+      direction: direction,
+      stream_type: stream_type,
+      type: type
+    })
+    |> case do
+      {:ok, _} ->
+        {:continue, state}
+
+      {:error, "call was dropped"} ->
+        :close
+    end
+  end
+
+  def handle_stream(%Stream{} = _stream, state) do
     Logger.info("#{state.stream_type}/#{state.room_id}")
     PubSub.subscribe(self(), "#{state.stream_type}/#{state.room_id}")
 
@@ -17,6 +49,19 @@ defmodule Http3Server.StreamHandler do
   end
 
   @impl Wtransport.StreamHandler
+  def handle_data(
+        data,
+        %Stream{} = stream,
+        %{from: from, to: to, direction: _direction, stream_type: stream_type, type: "phone_call"} =
+          state
+      ) do
+    if stream.stream_type == :bi do
+      PubSub.publish("#{stream_type}/phone_call/#{from}/#{to}", {:subscribed, self(), data})
+    end
+
+    {:continue, state}
+  end
+
   def handle_data(data, %Stream{} = stream, state) do
     if stream.stream_type == :bi do
       PubSub.publish("#{state.stream_type}/#{state.room_id}", {:subscribed, self(), data})
@@ -55,6 +100,21 @@ defmodule Http3Server.StreamHandler do
     end
 
     {:noreply, {stream, state}}
+  end
+
+  @impl true
+  def handle_info(:waiting_time_expired, {%Stream{} = stream, state}) do
+    Logger.info("waiting_time_expired from: #{state[:from]} to: #{state[:to]}")
+
+    {:stop, :normal, {stream, state}}
+  end
+
+  def handle_info({:end_call, "user_ended_call"}, {%Stream{} = stream, state}) do
+    Logger.info(
+      "one of participants ended a call direction: #{state[:direction]} from: #{state[:from]} to: #{state[:to]}"
+    )
+
+    {:stop, :normal, {stream, state}}
   end
 
   @impl true

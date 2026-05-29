@@ -1,6 +1,6 @@
 # Http3Server
 
-It is a stream server. I use it for [Video Conference app](https://github.com/AlexeyAlexey/video_conference)
+It is a stream server. I use it for [Video Conference app](https://github.com/AlexeyAlexey/video_conference) + [Video Conference vite](https://github.com/AlexeyAlexey/video_conference_vite)
 
 
 ```rust cargo``` is required
@@ -276,4 +276,24 @@ chmod +x ./switch_to_release.sh
 ```bash 
 ./switch_to_release.sh remote_user remote_host release
 ./switch_to_release.sh root "xx.xx.xx.xx" 20260428_184535
+```
+
+
+# Ringtone
+
+add header to mp3 file to send it through audio stream
+
+
+```bash
+
+# 1. Read the file as binary
+file_binary = File.read!("/path/to/mp3/file/chunk0.mp3")
+
+file_binary_size = byte_size(file_binary)
+
+# 2. Combine header and file data
+new_binary_data = <<"M", "S", file_binary_size::32, 2::8>> <> file_binary
+
+# 4. Save to a new file (optional)
+File.write!("/path/to/mp3/file/chunk0.mp3", new_binary_data)
 ```

@@ -25,26 +25,33 @@ defmodule Http3Server.AuthUserConnection do
             nil
         end
 
-      [room_id, user_id] =
-        case claims do
-          %{"room_id" => "params", "participant_id" => "params"} ->
-            user_id =
-              if is_integer(params["participant_id"]),
-                do: params["participant_id"],
-                else: String.to_integer(params["participant_id"])
+      case claims do
+        %{"room_id" => "params", "participant_id" => "params"} ->
+          user_id =
+            if is_integer(params["participant_id"]),
+              do: params["participant_id"],
+              else: String.to_integer(params["participant_id"])
 
-            [params["room_id"], user_id]
+          {:ok,
+           %{
+             user_id: user_id,
+             room_id: params["room_id"],
+             stream_type: stream_type
+           }}
 
-          _ ->
-            [claims["room_id"], claims["participant_id"]]
-        end
+        %{"from" => from, "to" => to, "type" => type, "direction" => direction} ->
+          {:ok,
+           %{
+             type: type,
+             from: from,
+             to: to,
+             direction: direction,
+             stream_type: stream_type
+           }}
 
-      {:ok,
-       %{
-         user_id: user_id,
-         room_id: room_id,
-         stream_type: stream_type
-       }}
+        _ ->
+          [claims["room_id"], claims["participant_id"]]
+      end
     else
       {:error, :signature_error} ->
         {:error, "user cannot be authenticated"}
