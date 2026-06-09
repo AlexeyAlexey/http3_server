@@ -11,6 +11,7 @@ defmodule Http3Server.StreamHandler do
   def handle_stream(
         %Stream{} = _stream,
         %{
+          custom_params: custom_params,
           from: from,
           to: to,
           direction: direction,
@@ -26,6 +27,7 @@ defmodule Http3Server.StreamHandler do
     PubSub.subscribe(self(), "#{stream_type}/phone_call/#{from}/#{to}")
 
     PhoneCallManager.connect(self(), %{
+      custom_params: custom_params,
       from: from,
       to: to,
       direction: direction,
@@ -34,7 +36,7 @@ defmodule Http3Server.StreamHandler do
     })
     |> case do
       {:ok, _} ->
-        {:continue, state}
+        {:continue, state |> Map.take([:from, :to, :direction, :stream_type, :type])}
 
       {:error, "call was dropped"} ->
         :close

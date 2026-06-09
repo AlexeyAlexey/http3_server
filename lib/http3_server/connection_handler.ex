@@ -8,21 +8,33 @@ defmodule Http3Server.ConnectionHandler do
   alias Http3Server.AuthUserConnection
   alias Http3Server.ConnectionHandlerErrorParser
   alias Http3Server.PhoneCallManager
+  alias Http3Server.SessionParameters
 
   # ConnectionHandler specific callbacks
 
   @impl Wtransport.ConnectionHandler
   def handle_session(%Session{} = session) do
-    case AuthUserConnection.auth(session) do
-      {:ok, %{user_id: user_id, room_id: room_id, stream_type: stream_type}} ->
-        state = %{user_id: user_id, room_id: room_id, stream_type: stream_type}
+    {:ok, %{params: params}} = SessionParameters.parse(session)
 
-        Logger.info("user connecting: #{user_id} room_id: #{room_id} stream_type: #{stream_type}")
+    stream_type = params["stream_type"]
 
-        {:continue, state}
+    case AuthUserConnection.auth(params["auth_token"]) do
+      # {:ok, %{user_id: user_id, room_id: room_id}} ->
+      #   state = %{user_id: user_id, room_id: room_id, stream_type: stream_type}
 
-      {:ok, %{from: from, to: to, direction: direction, stream_type: stream_type, type: type}} ->
-        state = %{from: from, to: to, direction: direction, stream_type: stream_type, type: type}
+      #   Logger.info("user connecting: #{user_id} room_id: #{room_id} stream_type: #{stream_type}")
+
+      #   {:continue, state}
+
+      {:ok, %{from: from, to: to, direction: direction, type: type, custom_params: custom_params}} ->
+        state = %{
+          from: from,
+          to: to,
+          direction: direction,
+          stream_type: stream_type,
+          type: type,
+          custom_params: custom_params
+        }
 
         {:continue, state}
 

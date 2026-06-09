@@ -47,13 +47,20 @@ defmodule Http3Server.AudioPhoneCallManager do
 
   def connect(
         caller_pid,
-        %{direction: "outcome", type: "phone_call" = type, from: from, to: to}
+        %{
+          custom_params: custom_params,
+          direction: "outcome",
+          type: "phone_call" = type,
+          from: from,
+          to: to
+        }
       ) do
     PhoneCallManager.call_id(type: type, from: from, to: to)
     |> AudioPhoneCallManagerSupervisor.start_child(
       caller_pid: caller_pid,
       from: from,
-      to: to
+      to: to,
+      receiver_custom_params: custom_params
     )
     |> case do
       {:ok, pid} ->
@@ -62,7 +69,13 @@ defmodule Http3Server.AudioPhoneCallManager do
       {:error, {:already_started, pid}} ->
         reconnect(
           caller_pid,
-          %{direction: "outcome", type: "phone_call", from: from, to: to}
+          %{
+            direction: "outcome",
+            type: "phone_call",
+            from: from,
+            to: to,
+            custom_params: custom_params
+          }
         )
 
         {:ok, pid}
@@ -71,11 +84,20 @@ defmodule Http3Server.AudioPhoneCallManager do
 
   def connect(
         receiver_pid,
-        %{direction: "income", type: "phone_call" = type, from: from, to: to}
+        %{
+          custom_params: custom_params,
+          direction: "income",
+          type: "phone_call" = type,
+          from: from,
+          to: to
+        }
       ) do
     with {:ok, _pid} <-
            PhoneCallManager.call_id(type: type, from: from, to: to) |> lookup_manager() do
-      responded("phone_call/#{from}/#{to}", %{receiver_pid: receiver_pid})
+      responded("phone_call/#{from}/#{to}", %{
+        receiver_pid: receiver_pid,
+        custom_params: custom_params
+      })
     else
       {:error, :not_found} ->
         {:error, "call was dropped"}
@@ -84,11 +106,19 @@ defmodule Http3Server.AudioPhoneCallManager do
 
   def reconnect(
         caller_pid,
-        %{direction: "outcome", type: "phone_call" = type, from: from, to: to}
+        %{
+          custom_params: custom_params,
+          direction: "outcome",
+          type: "phone_call" = type,
+          from: from,
+          to: to
+        }
       ) do
     PhoneCallManager.call_id(type: type, from: from, to: to)
     |> server()
-    |> GenServer.call({:reconnect, %{caller_pid: caller_pid}})
+    |> GenServer.call(
+      {:reconnect, %{caller_pid: caller_pid, receiver_custom_params: custom_params}}
+    )
   end
 
   def responded(call_id, data) when is_binary(call_id) and is_map(data) do
@@ -117,14 +147,16 @@ defmodule Http3Server.AudioPhoneCallManager do
 
   @impl true
   def handle_call(
-        {:reconnect, %{caller_pid: caller_pid}},
+        {:reconnect, %{caller_pid: caller_pid, receiver_custom_params: receiver_custom_params}},
         _from,
-        %{receiver_pid: receiver_pid} = state
+        state
       ) do
     # if state[:caller_pid] do
     #   # check if alive
     #   # send command to terminate
     # end
+
+    receiver_pid = state[:receiver_pid]
 
     state =
       if receiver_pid && Process.alive?(receiver_pid) do
@@ -143,13 +175,14 @@ defmodule Http3Server.AudioPhoneCallManager do
       state
       |> Map.put(:caller_pid, caller_pid)
       |> Map.put(:connection_status, :connected)
+      |> Map.put(:receiver_custom_params, receiver_custom_params)
 
     {:reply, {:ok, state}, state}
   end
 
   @impl true
   def handle_call(
-        {:responded, %{receiver_pid: receiver_pid}},
+        {:responded, %{receiver_pid: receiver_pid, custom_params: custom_params}},
         _from,
         state
       ) do
@@ -161,6 +194,7 @@ defmodule Http3Server.AudioPhoneCallManager do
     state =
       state
       |> Map.put(:receiver_pid, receiver_pid)
+      |> Map.put(:caller_custom_params, custom_params)
       |> Map.put(:responded, true)
 
     {:reply, {:ok, state}, state}
@@ -221,6 +255,7 @@ defmodule Http3Server.AudioPhoneCallManager do
       |> Map.put(:caller_pid, nil)
       |> Map.put(:receiver_pid, nil)
       |> Map.put(:connection_status, :disconnected)
+      |> Map.drop([:caller_custom_params, :receiver_custom_params])
 
     {:reply, :ok, state}
   end

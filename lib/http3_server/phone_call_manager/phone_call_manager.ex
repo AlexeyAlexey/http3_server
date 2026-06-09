@@ -12,19 +12,40 @@ defmodule Http3Server.PhoneCallManager do
 
   def connect(
         caller_pid,
-        %{direction: direction, stream_type: "audio", type: "phone_call", from: from, to: to}
+        %{
+          custom_params: custom_params,
+          direction: direction,
+          stream_type: "audio",
+          type: "phone_call",
+          from: from,
+          to: to
+        }
       ) do
     AudioPhoneCallManager.connect(
       caller_pid,
-      %{direction: direction, type: "phone_call", from: from, to: to}
+      %{
+        custom_params: custom_params,
+        direction: direction,
+        type: "phone_call",
+        from: from,
+        to: to
+      }
     )
   end
 
   def connect(
         receiver_pid,
-        %{direction: direction, stream_type: "video", type: "phone_call", from: from, to: to}
+        %{
+          custom_params: custom_params,
+          direction: direction,
+          stream_type: "video",
+          type: "phone_call",
+          from: from,
+          to: to
+        }
       ) do
     VideoPhoneCallManager.connect(receiver_pid, %{
+      custom_params: custom_params,
       direction: direction,
       type: "phone_call",
       from: from,

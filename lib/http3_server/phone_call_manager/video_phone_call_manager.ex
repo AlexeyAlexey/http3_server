@@ -36,13 +36,20 @@ defmodule Http3Server.VideoPhoneCallManager do
 
   def connect(
         caller_pid,
-        %{direction: "outcome", from: from, to: to, type: "phone_call" = type}
+        %{
+          custom_params: custom_params,
+          direction: "outcome",
+          from: from,
+          to: to,
+          type: "phone_call" = type
+        }
       ) do
     PhoneCallManager.call_id(type: type, from: from, to: to)
     |> VideoPhoneCallManagerSupervisor.start_child(
       caller_pid: caller_pid,
       from: from,
-      to: to
+      to: to,
+      receiver_custom_params: custom_params
     )
     |> case do
       {:ok, pid} ->
@@ -52,7 +59,13 @@ defmodule Http3Server.VideoPhoneCallManager do
         # {:error, {:already_started, pid}}
         reconnect(
           caller_pid,
-          %{direction: "outcome", type: "phone_call", from: from, to: to}
+          %{
+            custom_params: custom_params,
+            direction: "outcome",
+            type: "phone_call",
+            from: from,
+            to: to
+          }
         )
 
         {:ok, pid}
@@ -61,11 +74,20 @@ defmodule Http3Server.VideoPhoneCallManager do
 
   def connect(
         receiver_pid,
-        %{direction: "income", type: "phone_call" = type, from: from, to: to}
+        %{
+          custom_params: custom_params,
+          direction: "income",
+          type: "phone_call" = type,
+          from: from,
+          to: to
+        }
       ) do
     with {:ok, _pid} <-
            PhoneCallManager.call_id(type: type, from: from, to: to) |> lookup_manager() do
-      responded("phone_call/#{from}/#{to}", %{receiver_pid: receiver_pid})
+      responded("phone_call/#{from}/#{to}", %{
+        receiver_pid: receiver_pid,
+        caller_custom_params: custom_params
+      })
     else
       {:error, :not_found} ->
         {:error, "call was dropped"}
@@ -74,11 +96,19 @@ defmodule Http3Server.VideoPhoneCallManager do
 
   def reconnect(
         caller_pid,
-        %{direction: "outcome", type: "phone_call" = type, from: from, to: to}
+        %{
+          custom_params: custom_params,
+          direction: "outcome",
+          type: "phone_call" = type,
+          from: from,
+          to: to
+        }
       ) do
     PhoneCallManager.call_id(type: type, from: from, to: to)
     |> server()
-    |> GenServer.call({:reconnect, %{caller_pid: caller_pid}})
+    |> GenServer.call(
+      {:reconnect, %{caller_pid: caller_pid, receiver_custom_params: custom_params}}
+    )
   end
 
   def responded(call_id, data) when is_binary(call_id) and is_map(data) do
@@ -107,7 +137,7 @@ defmodule Http3Server.VideoPhoneCallManager do
 
   @impl true
   def handle_call(
-        {:reconnect, %{caller_pid: caller_pid}},
+        {:reconnect, %{caller_pid: caller_pid, receiver_custom_params: receiver_custom_params}},
         _from,
         state
       ) do
@@ -121,13 +151,14 @@ defmodule Http3Server.VideoPhoneCallManager do
     state =
       state
       |> Map.put(:caller_pid, caller_pid)
+      |> Map.put(:receiver_custom_params, receiver_custom_params)
 
     {:reply, {:ok, state}, state}
   end
 
   @impl true
   def handle_call(
-        {:responded, %{receiver_pid: receiver_pid}},
+        {:responded, %{receiver_pid: receiver_pid, caller_custom_params: caller_custom_params}},
         _from,
         state
       ) do
@@ -140,6 +171,7 @@ defmodule Http3Server.VideoPhoneCallManager do
       state
       |> Map.put(:receiver_pid, receiver_pid)
       |> Map.put(:responded, true)
+      |> Map.put(:caller_custom_params, caller_custom_params)
 
     {:reply, {:ok, state}, state}
   end
@@ -167,6 +199,14 @@ defmodule Http3Server.VideoPhoneCallManager do
         state
       ) do
     IO.inspect("video end_call")
+
+    state =
+      state
+      |> Map.put(:caller_pid, nil)
+      |> Map.put(:receiver_pid, nil)
+      |> Map.put(:connection_status, :disconnected)
+      |> Map.drop([:caller_custom_params, :receiver_custom_params])
+
     {:reply, :ok, state}
   end
 
