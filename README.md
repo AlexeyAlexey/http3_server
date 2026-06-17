@@ -67,6 +67,9 @@ dotenv -e .env iex -S mix
 # Docker
 
 ```bash
+# Debian 12
+# docker build -f Dockerfile.deb12 -t http3_server . 
+
 docker build -t http3_server .
 
 docker run  --name http3_server \

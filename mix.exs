@@ -14,8 +14,9 @@ defmodule Http3Server.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger, :observer, :wx, :runtime_tools],
+      # extra_applications: [:logger, :observer, :wx, :runtime_tools],
       # extra_applications: [:logger, :observer, :runtime_tools],
+      extra_applications: [:logger, :runtime_tools],
       mod: {Http3Server.Application, []}
     ]
   end

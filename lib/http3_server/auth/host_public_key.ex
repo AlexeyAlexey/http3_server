@@ -1,13 +1,16 @@
 defmodule Http3Server.Auth.HostPublicKey do
-  @host_public_keys %{
-    "local" => System.fetch_env!("JWT_LOCAL_HOST_PUBLIC_KEY")
-  }
+  # @host_public_keys %{
+  #   "local" => "JWT_LOCAL_HOST_PUBLIC_KEY"
+  # }
+  # TODO implement fetch public key from known host to verify JWT to connect. (z key)
 
-  def fetch(endpoint) when is_binary(endpoint) do
-    @host_public_keys[endpoint]
+  def fetch("local") do
+    local_host_public_key()
     |> case do
       nil -> {:error, "public key cannot be fetched from host"}
       key -> {:ok, key}
     end
   end
+
+  defp local_host_public_key, do: System.fetch_env!("JWT_LOCAL_HOST_PUBLIC_KEY")
 end
