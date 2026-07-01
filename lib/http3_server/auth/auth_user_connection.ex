@@ -13,7 +13,7 @@ defmodule Http3Server.AuthUserConnection do
         %{
           "from" => from,
           "to" => to,
-          "type" => type,
+          "type" => "phone_call" = type,
           "direction" => direction
         } = params ->
           {:ok,
@@ -23,6 +23,17 @@ defmodule Http3Server.AuthUserConnection do
              from: from,
              to: to,
              direction: direction
+           }}
+
+        %{
+          "type" => "conference" = type,
+          "conference_id" => conference_id
+        } = params ->
+          {:ok,
+           %{
+             custom_params: Map.get(params, "custom_params", %{}) |> Map.take(["id"]),
+             type: type,
+             conference_id: conference_id
            }}
 
         _ ->
