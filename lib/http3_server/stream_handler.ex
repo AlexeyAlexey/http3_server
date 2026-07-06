@@ -24,8 +24,6 @@ defmodule Http3Server.StreamHandler do
       "direction: #{direction}; #{state.stream_type}/phone_call/#{state.from}/#{state.to}"
     )
 
-    PubSub.subscribe(self(), "#{stream_type}/phone_call/#{from}/#{to}")
-
     PhoneCallManager.connect(self(), %{
       custom_params: custom_params,
       from: from,
@@ -36,6 +34,10 @@ defmodule Http3Server.StreamHandler do
     })
     |> case do
       {:ok, _} ->
+        # TODO replace topic by internal implementation. Parameters from jwt should not be used directly
+        # to build topic ?
+        PubSub.subscribe(self(), "#{stream_type}/phone_call/#{from}/#{to}")
+
         {:continue, state |> Map.take([:from, :to, :direction, :stream_type, :type])}
 
       {:error, "call was dropped"} ->
