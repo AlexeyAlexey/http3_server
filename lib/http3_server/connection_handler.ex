@@ -14,34 +14,63 @@ defmodule Http3Server.ConnectionHandler do
 
   @impl Wtransport.ConnectionHandler
   def handle_session(%Session{} = session) do
-    {:ok, %{params: params}} = SessionParameters.parse(session)
+    with {:ok, %{params: params}} <- SessionParameters.parse(session) do
+      stream_type = params["stream_type"]
 
-    stream_type = params["stream_type"]
+      case AuthUserConnection.auth(params["auth_token"]) do
+        # {:ok, %{user_id: user_id, room_id: room_id}} ->
+        #   state = %{user_id: user_id, room_id: room_id, stream_type: stream_type}
 
-    case AuthUserConnection.auth(params["auth_token"]) do
-      # {:ok, %{user_id: user_id, room_id: room_id}} ->
-      #   state = %{user_id: user_id, room_id: room_id, stream_type: stream_type}
+        #   Logger.info("user connecting: #{user_id} room_id: #{room_id} stream_type: #{stream_type}")
 
-      #   Logger.info("user connecting: #{user_id} room_id: #{room_id} stream_type: #{stream_type}")
+        #   {:continue, state}
 
-      #   {:continue, state}
+        {:ok,
+         %{
+           from: from,
+           to: to,
+           direction: direction,
+           type: "phone_call" = type,
+           custom_params: custom_params
+         }} ->
+          state = %{
+            from: from,
+            to: to,
+            direction: direction,
+            stream_type: stream_type,
+            type: type,
+            custom_params: custom_params
+          }
 
-      {:ok, %{from: from, to: to, direction: direction, type: type, custom_params: custom_params}} ->
-        state = %{
-          from: from,
-          to: to,
-          direction: direction,
-          stream_type: stream_type,
-          type: type,
-          custom_params: custom_params
-        }
+          {:continue, state}
 
-        {:continue, state}
+        {:ok,
+         %{
+           type: "conference" = type,
+           conference_id: conference_id,
+           participant_id: participant_id,
+           custom_params: custom_params
+         }} ->
+          state = %{
+            type: type,
+            conference_id: conference_id,
+            participant_id: participant_id,
+            custom_params: custom_params
+          }
 
-      {:error, msg} ->
-        Logger.error(msg)
+          {:continue, state}
 
-        {:error, %{}}
+        {:error, msg} ->
+          Logger.error(msg)
+
+          {:error, %{error: msg}}
+      end
+    else
+      error ->
+        inspect(error)
+        |> Logger.error()
+
+        {:error, %{error: error}}
     end
   end
 
@@ -63,13 +92,11 @@ defmodule Http3Server.ConnectionHandler do
   end
 
   @impl Wtransport.ConnectionHandler
-  def handle_error(reason, %Connection{} = _connection, state) do
+  def handle_error(reason, %Connection{} = _connection, %{type: "phone_call"} = state) do
     ConnectionHandlerErrorParser.parse(reason)
     |> case do
       "user_ended_call" ->
-        Logger.info(
-          "user_ended_call #{state |> Map.take([:direction, :from, :to, :type, :stream_type]) |> inspect()} reason: #{inspect(reason)}"
-        )
+        Logger.info("user_ended_call #{state |> inspect()} reason: #{inspect(reason)}")
 
         state
         |> Map.put(:reason, "user_ended_call")
@@ -80,8 +107,6 @@ defmodule Http3Server.ConnectionHandler do
 
         nil
     end
-
-    # state: %{type: "phone_call", to: 1234, from: 123, direction: "outcome", stream_type: "audio"} reason: "connection closed by peer: userEndCall (code 0)"
 
     :ok
   end

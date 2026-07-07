@@ -5,7 +5,8 @@ defmodule Http3Server.AuthUserConnection do
   alias Http3Server.Auth.HostPublicKey
 
   def auth(auth_token) when is_binary(auth_token) do
-    with {:ok, host} <- extract_host(auth_token),
+    with :ok <- check_if_auth_token_present(auth_token),
+         {:ok, host} <- extract_host(auth_token),
          {:ok, public_key} <- get_public_key(host),
          {:ok, claims} <-
            Http3Server.AuthToken.verify_token(auth_token, public_key) do
@@ -27,13 +28,16 @@ defmodule Http3Server.AuthUserConnection do
 
         %{
           "type" => "conference" = type,
-          "conference_id" => conference_id
-        } = params ->
+          "conference_id" => conference_id,
+          "participant_id" => participant_id
+        } = params
+        when is_integer(participant_id) ->
           {:ok,
            %{
              custom_params: Map.get(params, "custom_params", %{}) |> Map.take(["id"]),
              type: type,
-             conference_id: conference_id
+             conference_id: conference_id,
+             participant_id: participant_id
            }}
 
         _ ->
@@ -49,8 +53,13 @@ defmodule Http3Server.AuthUserConnection do
       {:error, "public key cannot be fetched from host"} ->
         {:error, "public key cannot be fetched from host"}
 
+      {:error, "auth token is required"} ->
+        {:error, "auth token is required"}
+
       error ->
-        Logger.error(error)
+        inspect(error)
+        |> Logger.error()
+
         {:error, "unexpected error"}
     end
   end
@@ -58,6 +67,12 @@ defmodule Http3Server.AuthUserConnection do
   def auth(_) do
     {:error, "user cannot be authenticated. Auth token is not presented"}
   end
+
+  defp check_if_auth_token_present(auth_token) when bit_size(auth_token) == 0 do
+    {:error, "auth token is required"}
+  end
+
+  defp check_if_auth_token_present(_), do: :ok
 
   defp extract_host(auth_token) when is_binary(auth_token) do
     [_head, body, _signature] = String.split(auth_token, ".")

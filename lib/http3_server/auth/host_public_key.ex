@@ -12,5 +12,7 @@ defmodule Http3Server.Auth.HostPublicKey do
     end
   end
 
+  def fetch(_), do: {:error, "public key cannot be fetched from host"}
+
   defp local_host_public_key, do: System.fetch_env!("JWT_LOCAL_HOST_PUBLIC_KEY")
 end
