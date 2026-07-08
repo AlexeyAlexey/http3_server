@@ -38,4 +38,37 @@ defmodule Http3Server.ConnectionHandlerTest do
                |> ConnectionHandler.handle_session()
     end
   end
+
+  describe "conference" do
+    test "successfully" do
+      data = %{
+        host: "local",
+        conference_id: "XXXXXXXXXX",
+        participant_id: 123,
+        stream_type: "audio",
+        type: "conference",
+        custom_params: %{"id" => "id"}
+      }
+
+      {:ok, auth_token} =
+        AuthToken.generate_token(
+          data,
+          System.fetch_env!("JWT_LOCAL_HOST_SECRET_KEY")
+        )
+
+      assert {:continue, state} =
+               mock_connection_session(path: "/", auth_token: auth_token)
+               |> ConnectionHandler.handle_session()
+
+      assert state ==
+               data
+               |> Map.take([:conference_id, :participant_id, :stream_type, :type, :custom_params])
+    end
+
+    test "auth token is required" do
+      assert {:error, %{error: "auth token is required"}} =
+               mock_connection_session(path: "/", auth_token: "")
+               |> ConnectionHandler.handle_session()
+    end
+  end
 end

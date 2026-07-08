@@ -45,6 +45,30 @@ defmodule Http3Server.StreamHandler do
     end
   end
 
+  def handle_stream(
+        %Stream{} = _stream,
+        %{
+          conference_id: conference_id,
+          participant_id: _participant_id,
+          stream_type: stream_type,
+          type: "conference" = type,
+          custom_params: _custom_params
+        } =
+          state
+      ) do
+    PubSub.subscribe(self(), "#{type}/#{stream_type}/#{conference_id}")
+
+    {:continue,
+     state
+     |> Map.take([
+       :conference_id,
+       :participant_id,
+       :stream_type,
+       :type,
+       :custom_params
+     ])}
+  end
+
   def handle_stream(%Stream{} = _stream, state) do
     Logger.info("#{state.stream_type}/#{state.room_id}")
     PubSub.subscribe(self(), "#{state.stream_type}/#{state.room_id}")
