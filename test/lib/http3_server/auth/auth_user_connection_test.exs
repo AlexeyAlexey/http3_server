@@ -15,6 +15,7 @@ defmodule Http3Server.AuthUserConnectionTest do
         from: "local@123",
         to: "host1@1234",
         direction: "outcome",
+        stream_type: "audio",
         type: "phone_call",
         custom_params: %{"id" => "id"}
       }
@@ -34,6 +35,7 @@ defmodule Http3Server.AuthUserConnectionTest do
         from: "local@123",
         to: "host1@1234",
         direction: "outcome",
+        stream_type: "audio",
         type: "phone_call",
         custom_params: %{"id" => "id"}
       }
@@ -53,6 +55,7 @@ defmodule Http3Server.AuthUserConnectionTest do
         from: "local@123",
         to: "host1@1234",
         direction: "outcome",
+        stream_type: "audio",
         type: "phone_call",
         custom_params: %{"id" => "id"}
       }
@@ -74,6 +77,7 @@ defmodule Http3Server.AuthUserConnectionTest do
         host: "local",
         conference_id: "XXXXXXXXXX",
         participant_id: 123,
+        stream_type: "audio",
         type: "conference",
         custom_params: %{"id" => "id"}
       }
@@ -92,6 +96,7 @@ defmodule Http3Server.AuthUserConnectionTest do
         host: "local",
         # conference_id: "XXXXXXXXXX",
         participant_id: 123,
+        stream_type: "audio",
         type: "conference",
         custom_params: %{"id" => "id"}
       }

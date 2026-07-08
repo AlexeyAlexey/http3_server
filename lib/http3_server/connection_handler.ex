@@ -15,8 +15,6 @@ defmodule Http3Server.ConnectionHandler do
   @impl Wtransport.ConnectionHandler
   def handle_session(%Session{} = session) do
     with {:ok, %{params: params}} <- SessionParameters.parse(session) do
-      stream_type = params["stream_type"]
-
       case AuthUserConnection.auth(params["auth_token"]) do
         # {:ok, %{user_id: user_id, room_id: room_id}} ->
         #   state = %{user_id: user_id, room_id: room_id, stream_type: stream_type}
@@ -30,6 +28,7 @@ defmodule Http3Server.ConnectionHandler do
            from: from,
            to: to,
            direction: direction,
+           stream_type: stream_type,
            type: "phone_call" = type,
            custom_params: custom_params
          }} ->
@@ -46,12 +45,14 @@ defmodule Http3Server.ConnectionHandler do
 
         {:ok,
          %{
+           stream_type: stream_type,
            type: "conference" = type,
            conference_id: conference_id,
            participant_id: participant_id,
            custom_params: custom_params
          }} ->
           state = %{
+            stream_type: stream_type,
             type: type,
             conference_id: conference_id,
             participant_id: participant_id,

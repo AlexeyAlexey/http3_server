@@ -12,6 +12,7 @@ defmodule Http3Server.ConnectionHandlerTest do
         from: "local@123",
         to: "host1@1234",
         direction: "outcome",
+        stream_type: "video",
         type: "phone_call",
         custom_params: %{"id" => "id"}
       }
@@ -22,23 +23,18 @@ defmodule Http3Server.ConnectionHandlerTest do
           System.fetch_env!("JWT_LOCAL_HOST_SECRET_KEY")
         )
 
-      stream_type = "video"
-
       assert {:continue, state} =
-               mock_connection_session(path: "/#{stream_type}", auth_token: auth_token)
+               mock_connection_session(path: "/", auth_token: auth_token)
                |> ConnectionHandler.handle_session()
 
       assert state ==
                data
-               |> Map.take([:from, :to, :direction, :type, :custom_params])
-               |> Map.put(:stream_type, stream_type)
+               |> Map.take([:from, :to, :direction, :type, :custom_params, :stream_type])
     end
 
     test "auth token is required" do
-      stream_type = "video"
-
       assert {:error, %{error: "auth token is required"}} =
-               mock_connection_session(path: "/#{stream_type}", auth_token: "")
+               mock_connection_session(path: "/", auth_token: "")
                |> ConnectionHandler.handle_session()
     end
   end

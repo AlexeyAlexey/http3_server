@@ -14,12 +14,14 @@ defmodule Http3Server.AuthUserConnection do
         %{
           "from" => from,
           "to" => to,
+          "stream_type" => stream_type,
           "type" => "phone_call" = type,
           "direction" => direction
         } = params ->
           {:ok,
            %{
              custom_params: Map.get(params, "custom_params", %{}) |> Map.take(["id"]),
+             stream_type: stream_type,
              type: type,
              from: from,
              to: to,
@@ -27,6 +29,7 @@ defmodule Http3Server.AuthUserConnection do
            }}
 
         %{
+          "stream_type" => stream_type,
           "type" => "conference" = type,
           "conference_id" => conference_id,
           "participant_id" => participant_id
@@ -35,6 +38,7 @@ defmodule Http3Server.AuthUserConnection do
           {:ok,
            %{
              custom_params: Map.get(params, "custom_params", %{}) |> Map.take(["id"]),
+             stream_type: stream_type,
              type: type,
              conference_id: conference_id,
              participant_id: participant_id
