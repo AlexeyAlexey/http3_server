@@ -50,12 +50,12 @@ defmodule Http3Server.AudioPhoneCallManager do
         %{
           custom_params: custom_params,
           direction: "outcome",
-          type: "phone_call" = type,
+          type: "phone_call",
           from: from,
           to: to
         }
       ) do
-    PhoneCallManager.call_id(type: type, from: from, to: to)
+    PhoneCallManager.call_id(from: from, to: to)
     |> AudioPhoneCallManagerSupervisor.start_child(
       caller_pid: caller_pid,
       from: from,
@@ -87,14 +87,15 @@ defmodule Http3Server.AudioPhoneCallManager do
         %{
           custom_params: custom_params,
           direction: "income",
-          type: "phone_call" = type,
+          type: "phone_call",
           from: from,
           to: to
         }
       ) do
-    with {:ok, _pid} <-
-           PhoneCallManager.call_id(type: type, from: from, to: to) |> lookup_manager() do
-      responded("phone_call/#{from}/#{to}", %{
+    call_id = PhoneCallManager.call_id(from: from, to: to)
+
+    with {:ok, _pid} <- lookup_manager(call_id) do
+      responded(call_id, %{
         receiver_pid: receiver_pid,
         custom_params: custom_params
       })
@@ -109,12 +110,12 @@ defmodule Http3Server.AudioPhoneCallManager do
         %{
           custom_params: custom_params,
           direction: "outcome",
-          type: "phone_call" = type,
+          type: "phone_call",
           from: from,
           to: to
         }
       ) do
-    PhoneCallManager.call_id(type: type, from: from, to: to)
+    PhoneCallManager.call_id(from: from, to: to)
     |> server()
     |> GenServer.call(
       {:reconnect, %{caller_pid: caller_pid, receiver_custom_params: custom_params}}
@@ -134,13 +135,13 @@ defmodule Http3Server.AudioPhoneCallManager do
   def end_call(
         %{
           direction: _direction,
-          type: "phone_call" = type,
+          type: "phone_call",
           from: from,
           to: to,
           reason: _reason
         } = params
       ) do
-    PhoneCallManager.call_id(type: type, from: from, to: to)
+    PhoneCallManager.call_id(from: from, to: to)
     |> server()
     |> GenServer.call({:end_call, params})
   end
@@ -229,24 +230,23 @@ defmodule Http3Server.AudioPhoneCallManager do
     # 3::8 is 1 byte
     package_size = 1 + reason_size
 
-    PubSub.publish(
-      "video/phone_call/#{state.from}/#{state.to}",
-      {:subscribed, self(), <<"M", "S", package_size::32, 3::8, reason::binary>>}
+    message = <<"M", "S", package_size::32, 3::8, reason::binary>>
+
+    PhoneCallManager.send_data_to_video_stream(from: state.from, to: state.to, data: message)
+    PhoneCallManager.send_data_to_audio_stream(from: state.from, to: state.to, data: message)
+
+    PhoneCallManager.trigger_video_stream_callback(
+      :end_call,
+      from: state.from,
+      to: state.to,
+      message: reason
     )
 
-    PubSub.publish(
-      "audio/phone_call/#{state.from}/#{state.to}",
-      {:subscribed, self(), <<"M", "S", package_size::32, 3::8, reason::binary>>}
-    )
-
-    PubSub.publish(
-      "audio/phone_call/#{state.from}/#{state.to}",
-      {:end_call, reason}
-    )
-
-    PubSub.publish(
-      "video/phone_call/#{state.from}/#{state.to}",
-      {:end_call, reason}
+    PhoneCallManager.trigger_audio_stream_callback(
+      :end_call,
+      from: state.from,
+      to: state.to,
+      message: reason
     )
 
     state =
@@ -265,7 +265,7 @@ defmodule Http3Server.AudioPhoneCallManager do
         {:play_ringtone, data},
         state
       ) do
-    PubSub.publish("audio/phone_call/#{state.from}/#{state.to}", {:subscribed, self(), data})
+    PhoneCallManager.send_data_to_audio_stream(from: state.from, to: state.to, data: data)
 
     {:noreply, state}
   end
@@ -276,9 +276,10 @@ defmodule Http3Server.AudioPhoneCallManager do
         %{responded: responded} = state
       ) do
     if !responded && state[:connection_status] == :connected do
-      PubSub.publish(
-        "audio/phone_call/#{state.from}/#{state.to}",
-        {:subscribed, self(), CallBeep.play()}
+      PhoneCallManager.send_data_to_audio_stream(
+        from: state.from,
+        to: state.to,
+        data: CallBeep.play()
       )
 
       Process.send_after(self(), :send_beep_to_caller, CallBeep.repeat_after())
@@ -292,24 +293,30 @@ defmodule Http3Server.AudioPhoneCallManager do
         state
       ) do
     if !state.responded do
-      PubSub.publish(
-        "audio/phone_call/#{state.from}/#{state.to}",
-        {:subscribed, self(), <<"M", "S", 21::32, 3::8, "waiting_time_expired">>}
+      data = <<"M", "S", 21::32, 3::8, "waiting_time_expired">>
+
+      PhoneCallManager.send_data_to_audio_stream(
+        from: state.from,
+        to: state.to,
+        data: data
       )
 
-      PubSub.publish(
-        "video/phone_call/#{state.from}/#{state.to}",
-        {:subscribed, self(), <<"M", "S", 21::32, 3::8, "waiting_time_expired">>}
+      PhoneCallManager.send_data_to_video_stream(
+        from: state.from,
+        to: state.to,
+        data: data
       )
 
-      PubSub.publish(
-        "audio/phone_call/#{state.from}/#{state.to}",
-        :waiting_time_expired
+      PhoneCallManager.trigger_audio_stream_callback(
+        :waiting_time_expired,
+        from: state.from,
+        to: state.to
       )
 
-      PubSub.publish(
-        "video/phone_call/#{state.from}/#{state.to}",
-        :waiting_time_expired
+      PhoneCallManager.trigger_video_stream_callback(
+        :waiting_time_expired,
+        from: state.from,
+        to: state.to
       )
     end
 

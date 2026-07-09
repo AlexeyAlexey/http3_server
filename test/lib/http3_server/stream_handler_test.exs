@@ -62,5 +62,25 @@ defmodule Http3Server.StreamHandlerTest do
                   :custom_params
                 ])}
     end
+
+    test "subscribed to conference topic" do
+      state = %{
+        conference_id: conference_id = "XXXXXXXXXX",
+        participant_id: 123,
+        stream_type: stream_type = "audio",
+        type: type = "conference",
+        custom_params: %{"id" => "id"}
+      }
+
+      topic = "#{type}/#{stream_type}/#{conference_id}"
+
+      assert PubSub.subscribers(topic) == []
+
+      assert mock_stream() |> StreamHandler.handle_stream(state)
+
+      pid = self()
+
+      assert PubSub.subscribers(topic) == [pid]
+    end
   end
 end

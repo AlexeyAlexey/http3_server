@@ -34,10 +34,6 @@ defmodule Http3Server.StreamHandler do
     })
     |> case do
       {:ok, _} ->
-        # TODO replace topic by internal implementation. Parameters from jwt should not be used directly
-        # to build topic ?
-        PubSub.subscribe(self(), "#{stream_type}/phone_call/#{from}/#{to}")
-
         {:continue, state |> Map.take([:from, :to, :direction, :stream_type, :type])}
 
       {:error, "call was dropped"} ->
@@ -84,7 +80,12 @@ defmodule Http3Server.StreamHandler do
           state
       ) do
     if stream.stream_type == :bi do
-      PubSub.publish("#{stream_type}/phone_call/#{from}/#{to}", {:subscribed, self(), data})
+      PhoneCallManager.send_data_to_stream(
+        stream_type: stream_type,
+        from: from,
+        to: to,
+        data: data
+      )
     end
 
     {:continue, state}
@@ -122,7 +123,7 @@ defmodule Http3Server.StreamHandler do
   end
 
   @impl true
-  def handle_info({:subscribed, from, data}, {%Stream{} = stream, state}) do
+  def handle_info({:phone_call_stream, from, data}, {%Stream{} = stream, state}) do
     if from != self() do
       :ok = Stream.send(stream, data)
     end
@@ -131,15 +132,22 @@ defmodule Http3Server.StreamHandler do
   end
 
   @impl true
-  def handle_info(:waiting_time_expired, {%Stream{} = stream, state}) do
-    Logger.info("waiting_time_expired from: #{state[:from]} to: #{state[:to]}")
+  def handle_info(
+        :waiting_time_expired,
+        {%Stream{} = stream, %{type: "phone_call", from: from, to: to} = state}
+      ) do
+    Logger.info("waiting_time_expired from: #{from} to: #{to}")
 
     {:stop, :normal, {stream, state}}
   end
 
-  def handle_info({:end_call, "user_ended_call"}, {%Stream{} = stream, state}) do
+  def handle_info(
+        {:end_call, "user_ended_call"},
+        {%Stream{} = stream,
+         %{type: "phone_call", from: from, to: to, direction: direction} = state}
+      ) do
     Logger.info(
-      "one of participants ended a call direction: #{state[:direction]} from: #{state[:from]} to: #{state[:to]}"
+      "one of participants ended a call direction: #{direction} from: #{from} to: #{to}"
     )
 
     {:stop, :normal, {stream, state}}

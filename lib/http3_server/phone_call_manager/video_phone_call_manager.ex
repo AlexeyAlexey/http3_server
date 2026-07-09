@@ -41,10 +41,10 @@ defmodule Http3Server.VideoPhoneCallManager do
           direction: "outcome",
           from: from,
           to: to,
-          type: "phone_call" = type
+          type: "phone_call"
         }
       ) do
-    PhoneCallManager.call_id(type: type, from: from, to: to)
+    PhoneCallManager.call_id(from: from, to: to)
     |> VideoPhoneCallManagerSupervisor.start_child(
       caller_pid: caller_pid,
       from: from,
@@ -77,13 +77,13 @@ defmodule Http3Server.VideoPhoneCallManager do
         %{
           custom_params: custom_params,
           direction: "income",
-          type: "phone_call" = type,
+          type: "phone_call",
           from: from,
           to: to
         }
       ) do
     with {:ok, _pid} <-
-           PhoneCallManager.call_id(type: type, from: from, to: to) |> lookup_manager() do
+           PhoneCallManager.call_id(from: from, to: to) |> lookup_manager() do
       responded("phone_call/#{from}/#{to}", %{
         receiver_pid: receiver_pid,
         caller_custom_params: custom_params
@@ -99,12 +99,12 @@ defmodule Http3Server.VideoPhoneCallManager do
         %{
           custom_params: custom_params,
           direction: "outcome",
-          type: "phone_call" = type,
+          type: "phone_call",
           from: from,
           to: to
         }
       ) do
-    PhoneCallManager.call_id(type: type, from: from, to: to)
+    PhoneCallManager.call_id(from: from, to: to)
     |> server()
     |> GenServer.call(
       {:reconnect, %{caller_pid: caller_pid, receiver_custom_params: custom_params}}
@@ -124,13 +124,13 @@ defmodule Http3Server.VideoPhoneCallManager do
   def end_call(
         %{
           direction: _direction,
-          type: "phone_call" = type,
+          type: "phone_call",
           from: from,
           to: to,
           reason: _reason
         } = params
       ) do
-    PhoneCallManager.call_id(type: type, from: from, to: to)
+    PhoneCallManager.call_id(from: from, to: to)
     |> server()
     |> GenServer.call({:end_call, params})
   end
@@ -145,8 +145,6 @@ defmodule Http3Server.VideoPhoneCallManager do
     #   # check if alive
     #   # send command to terminate
     # end
-
-    IO.inspect("video")
 
     state =
       state
@@ -198,8 +196,6 @@ defmodule Http3Server.VideoPhoneCallManager do
         _from,
         state
       ) do
-    IO.inspect("video end_call")
-
     state =
       state
       |> Map.put(:caller_pid, nil)
