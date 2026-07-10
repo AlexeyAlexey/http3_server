@@ -4,6 +4,7 @@ defmodule Http3Server.StreamHandler do
 
   alias Wtransport.Stream
   alias Http3Server.PhoneCallManager
+  alias Http3Server.PackageStreamHandler.Package, as: PackageHandler
 
   # StreamHandler specific callbacks
 
@@ -62,7 +63,8 @@ defmodule Http3Server.StreamHandler do
        :stream_type,
        :type,
        :custom_params
-     ])}
+     ])
+     |> Map.put(:package_handler, %{buffer: <<>>, leftover_bytes: 0})}
   end
 
   def handle_stream(%Stream{} = _stream, state) do
@@ -89,6 +91,46 @@ defmodule Http3Server.StreamHandler do
     end
 
     {:continue, state}
+  end
+
+  @impl Wtransport.StreamHandler
+  def handle_data(
+        data,
+        %Stream{} = stream,
+        %{
+          stream_type: stream_type,
+          participant_id: participant_id,
+          conference_id: conference_id,
+          type: "conference" = type,
+          package_handler: package_handler
+        } =
+          state
+      ) do
+    if stream.stream_type == :bi do
+      {parsed_data, buffer, leftover_bytes} =
+        PackageHandler.expand_with(
+          data,
+          <<participant_id::size(4)-unit(8)>>,
+          package_handler[:buffer],
+          package_handler[:leftover_bytes]
+        )
+
+      package_handler =
+        package_handler
+        |> Map.put(:buffer, buffer)
+        |> Map.put(:leftover_bytes, leftover_bytes)
+
+      state = state |> Map.put(:package_handler, package_handler)
+
+      PubSub.publish(
+        "#{type}/#{stream_type}/#{conference_id}",
+        {:conference_stream, self(), parsed_data}
+      )
+
+      {:continue, state}
+    else
+      {:continue, state}
+    end
   end
 
   def handle_data(data, %Stream{} = stream, state) do
@@ -124,6 +166,15 @@ defmodule Http3Server.StreamHandler do
 
   @impl true
   def handle_info({:phone_call_stream, from, data}, {%Stream{} = stream, state}) do
+    if from != self() do
+      :ok = Stream.send(stream, data)
+    end
+
+    {:noreply, {stream, state}}
+  end
+
+  @impl true
+  def handle_info({:conference_stream, from, data}, {%Stream{} = stream, state}) do
     if from != self() do
       :ok = Stream.send(stream, data)
     end
