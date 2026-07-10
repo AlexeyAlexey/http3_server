@@ -99,4 +99,43 @@ defmodule Http3Server.PackageStreamHandler.PackageTest do
              <<77, 0, 5, 6>>
              |> Package.expand_with(binary_extension)
   end
+
+  describe "expand_with when buffer is a parameter" do
+    test "buffered part of previous stream is used to parse next" do
+      stream = <<0, 77, 83, 21::size(4)-unit(8), 3::8, "waiting_time_expired", 77, 83, 0, 0>>
+
+      binary_extension = <<123::size(4)-unit(8)>>
+
+      assert {<<0, 77, 83, 69, 25::size(4)-unit(8), 123::size(4)-unit(8), 3::8,
+                "waiting_time_expired">>, buffer, leftover_bytes} =
+               Package.expand_with(stream, binary_extension)
+
+      assert buffer == <<77, 83, 0, 0>>
+
+      next_stream_part = <<0, 21, 3::8, "waiting_time_expired">>
+
+      assert {<<77, 83, 69, 25::size(4)-unit(8), 123::size(4)-unit(8), 3::8,
+                "waiting_time_expired">>, buffer, leftover_bytes} =
+               Package.expand_with(next_stream_part, binary_extension, buffer, leftover_bytes)
+
+      assert buffer == <<>>
+      assert leftover_bytes == 0
+    end
+
+    test "buffer is empty" do
+      stream = <<0, 77, 83, 21::size(4)-unit(8), 3::8, "waiting_time_expired", 77, 83, 0, 0>>
+
+      binary_extension = <<123::size(4)-unit(8)>>
+      leftover_bytes = 0
+
+      buffer = <<>>
+
+      assert {<<0, 77, 83, 69, 25::size(4)-unit(8), 123::size(4)-unit(8), 3::8,
+                "waiting_time_expired">>, buffer, leftover_bytes} =
+               Package.expand_with(stream, binary_extension, buffer, leftover_bytes)
+
+      assert buffer == <<77, 83, 0, 0>>
+      assert leftover_bytes == 0
+    end
+  end
 end

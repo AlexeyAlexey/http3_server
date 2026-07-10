@@ -13,6 +13,12 @@ defmodule Http3Server.PackageStreamHandler.Package do
   # after adding header is changed <<'M', 'S', 'E', new_payload_length::32, binary_extension, payload>>
   # new_payload_length = binary_extension_length + payload_length
 
+  def expand_with(stream, binary_extension, buffer, leftover_bytes)
+      when is_binary(stream) and is_binary(binary_extension) and is_binary(buffer) do
+    (buffer <> stream)
+    |> expand_with(binary_extension, leftover_bytes)
+  end
+
   def expand_with(stream, binary_extension, leftover_bytes \\ 0)
 
   def expand_with(stream, binary_extension, leftover_bytes)
