@@ -112,6 +112,13 @@ defmodule Http3Server.ConnectionHandler do
     :ok
   end
 
+  @impl Wtransport.ConnectionHandler
+  def handle_error(reason, %Connection{} = _connection, %{type: "conference"} = state) do
+    Logger.error("state: #{inspect(state)} reason: #{inspect(reason)}")
+
+    :ok
+  end
+
   # GenServer callbacks
 
   @impl true
