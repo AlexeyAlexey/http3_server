@@ -300,3 +300,7 @@ new_binary_data = <<"M", "S", file_binary_size::32, 2::8>> <> file_binary
 # 4. Save to a new file (optional)
 File.write!("/path/to/mp3/file/chunk0.mp3", new_binary_data)
 ```
+
+ Mix.ensure_application!(:observer)
+:ok
+iex(2)> :observer.start()

@@ -72,7 +72,8 @@ defmodule Http3Server.PhoneCallManager do
   def subscribe(pid, stream_type: stream_type, from: from, to: to) when is_pid(pid) do
     stream_topic = stream_topic(stream_type: stream_type, from: from, to: to)
 
-    PubSub.subscribe(pid, stream_topic)
+    # PubSub.subscribe(pid, stream_topic)
+    Phoenix.PubSub.subscribe(Http3Server.PubSub, stream_topic)
   end
 
   def user_ended_call(%{
@@ -102,12 +103,14 @@ defmodule Http3Server.PhoneCallManager do
 
   def send_data_to_stream(stream_type: stream_type, from: from, to: to, data: data)
       when is_binary(data) do
-    stream_topic(
-      stream_type: stream_type,
-      from: from,
-      to: to
-    )
-    |> PubSub.publish({:phone_call_stream, self(), data})
+    topic =
+      stream_topic(
+        stream_type: stream_type,
+        from: from,
+        to: to
+      )
+
+    Phoenix.PubSub.broadcast(Http3Server.PubSub, topic, {:phone_call_stream, self(), data})
   end
 
   def send_data_to_video_stream(from: from, to: to, data: data) when is_binary(data) do
@@ -123,38 +126,46 @@ defmodule Http3Server.PhoneCallManager do
         to: to,
         message: message
       ) do
-    video_stream_topic(
-      from: from,
-      to: to
-    )
-    |> PubSub.publish({callback, message})
+    topic =
+      video_stream_topic(
+        from: from,
+        to: to
+      )
+
+    Phoenix.PubSub.broadcast(Http3Server.PubSub, topic, {callback, message})
   end
 
   def trigger_video_stream_callback(callback,
         from: from,
         to: to
       ) do
-    video_stream_topic(
-      from: from,
-      to: to
-    )
-    |> PubSub.publish(callback)
+    topic =
+      video_stream_topic(
+        from: from,
+        to: to
+      )
+
+    Phoenix.PubSub.broadcast(Http3Server.PubSub, topic, callback)
   end
 
   def trigger_audio_stream_callback(callback, from: from, to: to, message: message) do
-    audio_stream_topic(
-      from: from,
-      to: to
-    )
-    |> PubSub.publish({callback, message})
+    topic =
+      audio_stream_topic(
+        from: from,
+        to: to
+      )
+
+    Phoenix.PubSub.broadcast(Http3Server.PubSub, topic, {callback, message})
   end
 
   def trigger_audio_stream_callback(callback, from: from, to: to) do
-    audio_stream_topic(
-      from: from,
-      to: to
-    )
-    |> PubSub.publish(callback)
+    topic =
+      audio_stream_topic(
+        from: from,
+        to: to
+      )
+
+    Phoenix.PubSub.broadcast(Http3Server.PubSub, topic, callback)
   end
 
   def call_id(

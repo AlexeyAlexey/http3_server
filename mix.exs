@@ -16,8 +16,8 @@ defmodule Http3Server.MixProject do
   def application do
     [
       # extra_applications: [:logger, :observer, :wx, :runtime_tools],
-      # extra_applications: [:logger, :observer, :runtime_tools],
-      extra_applications: [:logger, :runtime_tools],
+      extra_applications: [:logger, :observer, :runtime_tools],
+      # extra_applications: [:logger, :runtime_tools],
       mod: {Http3Server.Application, []}
     ]
   end
@@ -25,16 +25,20 @@ defmodule Http3Server.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:wtransport, git: "https://github.com/bugnano/wtransport-elixir.git"},
-      {:pubsub, "~> 1.1"},
+      # {:wtransport, git: "https://github.com/bugnano/wtransport-elixir.git"},
+      # {:pubsub, "~> 1.1"},
+      {:phoenix_pubsub, "~> 2.0"},
       # A JSON Web Token (JWT) Library.
       {:joken, "~> 2.6"},
       #  A blazing fast JSON parser and generator in pure Elixir.
-      {:jason, "~> 1.4"}
+      {:jason, "~> 1.4"},
+      {:webtransport, git: "https://github.com/benoitc/erlang-webtransport.git"}
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
     ]
   end
+
+  # {webtransport, {git, "https://github.com/benoitc/erlang-webtransport.git", {branch, "main"}}}
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
