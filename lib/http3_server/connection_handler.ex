@@ -25,36 +25,12 @@ defmodule Http3Server.ConnectionHandler do
 
         {:ok,
          %{
-           from: from,
-           to: to,
-           direction: direction,
-           stream_type: stream_type,
-           type: "phone_call" = type,
-           custom_params: custom_params
-         }} ->
-          state = %{
-            from: from,
-            to: to,
-            direction: direction,
-            stream_type: stream_type,
-            type: type,
-            custom_params: custom_params
-          }
-
-          {:continue, state}
-
-        {:ok,
-         %{
-           stream_type: stream_type,
-           type: "conference" = type,
-           conference_id: conference_id,
+           room_id: room_id,
            participant_id: participant_id,
            custom_params: custom_params
          }} ->
           state = %{
-            stream_type: stream_type,
-            type: type,
-            conference_id: conference_id,
+            room_id: room_id,
             participant_id: participant_id,
             custom_params: custom_params
           }

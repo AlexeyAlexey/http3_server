@@ -12,35 +12,14 @@ defmodule Http3Server.AuthUserConnection do
            Http3Server.AuthToken.verify_token(auth_token, public_key) do
       case claims do
         %{
-          "from" => from,
-          "to" => to,
-          "stream_type" => stream_type,
-          "type" => "phone_call" = type,
-          "direction" => direction
-        } = params ->
-          {:ok,
-           %{
-             custom_params: Map.get(params, "custom_params", %{}) |> Map.take(["id"]),
-             stream_type: stream_type,
-             type: type,
-             from: from,
-             to: to,
-             direction: direction
-           }}
-
-        %{
-          "stream_type" => stream_type,
-          "type" => "conference" = type,
-          "conference_id" => conference_id,
+          "room_id" => room_id,
           "participant_id" => participant_id
         } = params
         when is_integer(participant_id) ->
           {:ok,
            %{
-             custom_params: Map.get(params, "custom_params", %{}) |> Map.take(["id"]),
-             stream_type: stream_type,
-             type: type,
-             conference_id: conference_id,
+             room_id: room_id,
+             custom_params: Map.get(params, "custom_params", %{}),
              participant_id: participant_id
            }}
 

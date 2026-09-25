@@ -7,29 +7,40 @@ defmodule Http3Server.StreamHandlerTest do
   describe "phone call" do
     test "successfully" do
       state = %{
-        from: "local@123",
-        to: "host1@1234",
-        direction: "outcome",
-        stream_type: "video",
-        type: "phone_call",
-        custom_params: %{"id" => "id"}
+        room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
+        participant_id: 123,
+        custom_params: %{
+          "id" => "id",
+          "from" => "local@123",
+          "to" => "host1@1234",
+          "direction" => "outcome",
+          "stream_type" => "audio",
+          "type" => "phone_call"
+        }
       }
 
       assert mock_stream() |> StreamHandler.handle_stream(state) ==
-               {:continue, state |> Map.take([:from, :to, :direction, :stream_type, :type])}
+               {:continue,
+                state
+                |> Map.take([:room_id, :participant_id, :custom_params])
+                |> Map.put(:package_handler, %{buffer: <<>>, leftover_bytes: 0})}
     end
 
     test "subscribed to call topic" do
       state = %{
-        from: from = "local@123",
-        to: to = "host1@1234",
-        direction: "outcome",
-        stream_type: stream_type = "video",
-        type: "phone_call",
-        custom_params: %{"id" => "id"}
+        room_id: room_id = "phone_call:123e4567-e89b-12d3-a456-426614174000",
+        participant_id: 123,
+        custom_params: %{
+          "id" => "id",
+          "from" => "local@123",
+          "to" => "host1@1234",
+          "direction" => "outcome",
+          "stream_type" => "audio",
+          "type" => "phone_call"
+        }
       }
 
-      topic = "#{stream_type}/phone_call/#{from}/#{to}"
+      topic = room_id
 
       assert PubSub.subscribers(topic) == []
 
@@ -44,21 +55,22 @@ defmodule Http3Server.StreamHandlerTest do
   describe "conference" do
     test "successfully" do
       state = %{
-        conference_id: "XXXXXXXXXX",
+        room_id: "conference:123e4567-e89b-12d3-a456-426614174000",
         participant_id: 123,
-        stream_type: "audio",
-        type: "conference",
-        custom_params: %{"id" => "id"}
+        custom_params: %{
+          "id" => "id",
+          "conference_id" => "XXXXXXXXXX",
+          "stream_type" => "audio",
+          "type" => "phone_call"
+        }
       }
 
       assert mock_stream() |> StreamHandler.handle_stream(state) ==
                {:continue,
                 state
                 |> Map.take([
-                  :conference_id,
+                  :room_id,
                   :participant_id,
-                  :stream_type,
-                  :type,
                   :custom_params
                 ])
                 |> Map.put(:package_handler, %{buffer: <<>>, leftover_bytes: 0})}
@@ -66,14 +78,17 @@ defmodule Http3Server.StreamHandlerTest do
 
     test "subscribed to conference topic" do
       state = %{
-        conference_id: conference_id = "XXXXXXXXXX",
+        room_id: room_id = "conference:123e4567-e89b-12d3-a456-426614174000",
         participant_id: 123,
-        stream_type: stream_type = "audio",
-        type: type = "conference",
-        custom_params: %{"id" => "id"}
+        custom_params: %{
+          "id" => "id",
+          "conference_id" => "XXXXXXXXXX",
+          "stream_type" => "audio",
+          "type" => "phone_call"
+        }
       }
 
-      topic = "#{type}/#{stream_type}/#{conference_id}"
+      topic = room_id
 
       assert PubSub.subscribers(topic) == []
 
@@ -88,15 +103,18 @@ defmodule Http3Server.StreamHandlerTest do
   describe "conference handle data" do
     test "expand stream package with participant_id" do
       state = %{
-        conference_id: conference_id = "XXXXXXXXXX",
+        room_id: room_id = "conference:123e4567-e89b-12d3-a456-426614174000",
         participant_id: participant_id = 123,
-        stream_type: stream_type = "audio",
-        type: type = "conference",
-        custom_params: %{"id" => "id"},
+        custom_params: %{
+          "id" => "id",
+          "conference_id" => "XXXXXXXXXX",
+          "stream_type" => "audio",
+          "type" => "phone_call"
+        },
         package_handler: %{buffer: <<>>, leftover_bytes: 0}
       }
 
-      PubSub.subscribe(self(), "#{type}/#{stream_type}/#{conference_id}")
+      PubSub.subscribe(self(), room_id)
 
       data = <<77, 83, 21::size(4)-unit(8), 3::8, "waiting_time_expired", 77, 83>>
 
@@ -105,15 +123,13 @@ defmodule Http3Server.StreamHandlerTest do
       assert updated_state ==
                state
                |> Map.take([
-                 :conference_id,
+                 :room_id,
                  :participant_id,
-                 :stream_type,
-                 :type,
                  :custom_params
                ])
                |> Map.put(:package_handler, %{buffer: <<77, 83>>, leftover_bytes: 0})
 
-      assert_receive {:conference_stream, _pid,
+      assert_receive {:room_stream, _pid,
                       <<77, 83, 69, 25::size(4)-unit(8), ^participant_id::size(4)-unit(8), 3::8,
                         "waiting_time_expired">>}
     end

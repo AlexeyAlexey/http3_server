@@ -3,105 +3,36 @@ defmodule Http3Server.StreamHandler do
   require Logger
 
   alias Wtransport.Stream
-  alias Http3Server.PhoneCallManager
   alias Http3Server.PackageStreamHandler.Package, as: PackageHandler
 
-  # StreamHandler specific callbacks
-
-  @impl Wtransport.StreamHandler
   def handle_stream(
         %Stream{} = _stream,
         %{
-          custom_params: custom_params,
-          from: from,
-          to: to,
-          direction: direction,
-          stream_type: stream_type,
-          type: "phone_call" = type
-        } =
-          state
-      ) do
-    Logger.info(
-      "direction: #{direction}; #{state.stream_type}/phone_call/#{state.from}/#{state.to}"
-    )
-
-    PhoneCallManager.connect(self(), %{
-      custom_params: custom_params,
-      from: from,
-      to: to,
-      direction: direction,
-      stream_type: stream_type,
-      type: type
-    })
-    |> case do
-      {:ok, _} ->
-        {:continue, state |> Map.take([:from, :to, :direction, :stream_type, :type])}
-
-      {:error, "call was dropped"} ->
-        :close
-    end
-  end
-
-  def handle_stream(
-        %Stream{} = _stream,
-        %{
-          conference_id: conference_id,
+          room_id: room_id,
           participant_id: _participant_id,
-          stream_type: stream_type,
-          type: "conference" = type,
           custom_params: _custom_params
         } =
           state
       ) do
-    PubSub.subscribe(self(), "#{type}/#{stream_type}/#{conference_id}")
+    PubSub.subscribe(self(), room_id)
 
     {:continue,
      state
      |> Map.take([
-       :conference_id,
+       :room_id,
        :participant_id,
-       :stream_type,
-       :type,
        :custom_params
      ])
      |> Map.put(:package_handler, %{buffer: <<>>, leftover_bytes: 0})}
   end
 
-  def handle_stream(%Stream{} = _stream, state) do
-    Logger.info("#{state.stream_type}/#{state.room_id}")
-    PubSub.subscribe(self(), "#{state.stream_type}/#{state.room_id}")
-
-    {:continue, state}
-  end
-
-  @impl Wtransport.StreamHandler
-  def handle_data(
-        data,
-        %Stream{} = stream,
-        %{from: from, to: to, direction: _direction, stream_type: stream_type, type: "phone_call"} =
-          state
-      ) do
-    if stream.stream_type == :bi do
-      PhoneCallManager.send_data_to_stream(
-        stream_type: stream_type,
-        from: from,
-        to: to,
-        data: data
-      )
-    end
-
-    {:continue, state}
-  end
-
   @impl Wtransport.StreamHandler
   def handle_data(
         data,
         %Stream{} = stream,
         %{
-          stream_type: stream_type,
+          room_id: room_id,
           participant_id: participant_id,
-          conference_id: conference_id,
-          type: "conference" = type,
           package_handler: package_handler
         } =
           state
@@ -123,22 +54,14 @@ defmodule Http3Server.StreamHandler do
       state = state |> Map.put(:package_handler, package_handler)
 
       PubSub.publish(
-        "#{type}/#{stream_type}/#{conference_id}",
-        {:conference_stream, self(), parsed_data}
+        room_id,
+        {:room_stream, self(), parsed_data}
       )
 
       {:continue, state}
     else
       {:continue, state}
     end
-  end
-
-  def handle_data(data, %Stream{} = stream, state) do
-    if stream.stream_type == :bi do
-      PubSub.publish("#{state.stream_type}/#{state.room_id}", {:subscribed, self(), data})
-    end
-
-    {:continue, state}
   end
 
   @impl Wtransport.StreamHandler
@@ -165,43 +88,12 @@ defmodule Http3Server.StreamHandler do
   end
 
   @impl true
-  def handle_info({:phone_call_stream, from, data}, {%Stream{} = stream, state}) do
+  def handle_info({:room_stream, from, data}, {%Stream{} = stream, state}) do
     if from != self() do
       :ok = Stream.send(stream, data)
     end
 
     {:noreply, {stream, state}}
-  end
-
-  @impl true
-  def handle_info({:conference_stream, from, data}, {%Stream{} = stream, state}) do
-    if from != self() do
-      :ok = Stream.send(stream, data)
-    end
-
-    {:noreply, {stream, state}}
-  end
-
-  @impl true
-  def handle_info(
-        :waiting_time_expired,
-        {%Stream{} = stream, %{type: "phone_call", from: from, to: to} = state}
-      ) do
-    Logger.info("waiting_time_expired from: #{from} to: #{to}")
-
-    {:stop, :normal, {stream, state}}
-  end
-
-  def handle_info(
-        {:end_call, "user_ended_call"},
-        {%Stream{} = stream,
-         %{type: "phone_call", from: from, to: to, direction: direction} = state}
-      ) do
-    Logger.info(
-      "one of participants ended a call direction: #{direction} from: #{from} to: #{to}"
-    )
-
-    {:stop, :normal, {stream, state}}
   end
 
   @impl true
