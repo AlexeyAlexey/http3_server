@@ -9,12 +9,16 @@ defmodule Http3Server.ConnectionHandlerTest do
     test "successfully" do
       data = %{
         host: "local",
-        from: "local@123",
-        to: "host1@1234",
-        direction: "outcome",
-        stream_type: "video",
-        type: "phone_call",
-        custom_params: %{"id" => "id"}
+        room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
+        participant_id: 123,
+        custom_params: %{
+          "id" => "id",
+          "from" => "local@123",
+          "to" => "host1@1234",
+          "direction" => "outcome",
+          "stream_type" => "audio",
+          "type" => "phone_call"
+        }
       }
 
       {:ok, auth_token} =
@@ -29,7 +33,7 @@ defmodule Http3Server.ConnectionHandlerTest do
 
       assert state ==
                data
-               |> Map.take([:from, :to, :direction, :type, :custom_params, :stream_type])
+               |> Map.take([:room_id, :participant_id, :custom_params])
     end
 
     test "auth token is required" do
@@ -43,11 +47,14 @@ defmodule Http3Server.ConnectionHandlerTest do
     test "successfully" do
       data = %{
         host: "local",
-        conference_id: "XXXXXXXXXX",
+        room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
         participant_id: 123,
-        stream_type: "audio",
-        type: "conference",
-        custom_params: %{"id" => "id"}
+        custom_params: %{
+          "id" => "id",
+          "conference_id" => "XXXXXXXXXX",
+          "stream_type" => "audio",
+          "type" => "phone_call"
+        }
       }
 
       {:ok, auth_token} =
@@ -62,7 +69,7 @@ defmodule Http3Server.ConnectionHandlerTest do
 
       assert state ==
                data
-               |> Map.take([:conference_id, :participant_id, :stream_type, :type, :custom_params])
+               |> Map.take([:room_id, :participant_id, :custom_params])
     end
 
     test "auth token is required" do

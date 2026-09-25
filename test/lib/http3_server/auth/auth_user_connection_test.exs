@@ -12,12 +12,16 @@ defmodule Http3Server.AuthUserConnectionTest do
     test "successfully auth" do
       data = %{
         host: "local",
-        from: "local@123",
-        to: "host1@1234",
-        direction: "outcome",
-        stream_type: "audio",
-        type: "phone_call",
-        custom_params: %{"id" => "id"}
+        room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
+        participant_id: 123,
+        custom_params: %{
+          "id" => "id",
+          "from" => "local@123",
+          "to" => "host1@1234",
+          "direction" => "outcome",
+          "stream_type" => "audio",
+          "type" => "phone_call"
+        }
       }
 
       {:ok, auth_token} =
@@ -32,12 +36,16 @@ defmodule Http3Server.AuthUserConnectionTest do
     test "host is not trusted" do
       data = %{
         host: "global",
-        from: "local@123",
-        to: "host1@1234",
-        direction: "outcome",
-        stream_type: "audio",
-        type: "phone_call",
-        custom_params: %{"id" => "id"}
+        room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
+        participant_id: 123,
+        custom_params: %{
+          "id" => "id",
+          "from" => "local@123",
+          "to" => "host1@1234",
+          "direction" => "outcome",
+          "stream_type" => "audio",
+          "type" => "phone_call"
+        }
       }
 
       {:ok, auth_token} =
@@ -52,12 +60,16 @@ defmodule Http3Server.AuthUserConnectionTest do
     test "public key cannot be fetched from host" do
       data = %{
         host: "test",
-        from: "local@123",
-        to: "host1@1234",
-        direction: "outcome",
-        stream_type: "audio",
-        type: "phone_call",
-        custom_params: %{"id" => "id"}
+        room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
+        participant_id: 123,
+        custom_params: %{
+          "id" => "id",
+          "from" => "local@123",
+          "to" => "host1@1234",
+          "direction" => "outcome",
+          "stream_type" => "audio",
+          "type" => "phone_call"
+        }
       }
 
       {:ok, auth_token} =
@@ -75,11 +87,14 @@ defmodule Http3Server.AuthUserConnectionTest do
     test "successfully auth" do
       data = %{
         host: "local",
-        conference_id: "XXXXXXXXXX",
+        room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
         participant_id: 123,
-        stream_type: "audio",
-        type: "conference",
-        custom_params: %{"id" => "id"}
+        custom_params: %{
+          "id" => "id",
+          "conference_id" => 123,
+          "stream_type" => "audio",
+          "type" => "conference"
+        }
       }
 
       {:ok, auth_token} =
@@ -91,14 +106,17 @@ defmodule Http3Server.AuthUserConnectionTest do
       assert AuthUserConnection.auth(auth_token) == {:ok, data |> Map.delete(:host)}
     end
 
-    test "conference_id is required parameter" do
+    test "room_id is required parameter" do
       data = %{
         host: "local",
-        # conference_id: "XXXXXXXXXX",
+        # room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
         participant_id: 123,
-        stream_type: "audio",
-        type: "conference",
-        custom_params: %{"id" => "id"}
+        custom_params: %{
+          "id" => "id",
+          "conference_id" => 123,
+          "stream_type" => "audio",
+          "type" => "conference"
+        }
       }
 
       {:ok, auth_token} =
@@ -114,10 +132,14 @@ defmodule Http3Server.AuthUserConnectionTest do
     test "participant_id is required parameter" do
       data = %{
         host: "local",
-        conference_id: "XXXXXXXXXX",
+        room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
         # participant_id: 123,
-        type: "conference",
-        custom_params: %{"id" => "id"}
+        custom_params: %{
+          "id" => "id",
+          "conference_id" => 123,
+          "stream_type" => "audio",
+          "type" => "conference"
+        }
       }
 
       {:ok, auth_token} =
@@ -133,10 +155,14 @@ defmodule Http3Server.AuthUserConnectionTest do
     test "participant_id is not integer" do
       data = %{
         host: "local",
-        conference_id: "XXXXXXXXXX",
+        room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
         participant_id: "123",
-        type: "conference",
-        custom_params: %{"id" => "id"}
+        custom_params: %{
+          "id" => "id",
+          "conference_id" => 123,
+          "stream_type" => "audio",
+          "type" => "conference"
+        }
       }
 
       {:ok, auth_token} =

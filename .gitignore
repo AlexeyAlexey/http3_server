@@ -23,5 +23,6 @@ erl_crash.dump
 http3_server-*.tar
 
 .env
+.env.test
 
 
