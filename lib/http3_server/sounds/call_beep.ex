@@ -1,7 +1,8 @@
 defmodule Http3Server.CallBeep do
   # seconds
   @repeat_after 3000
-  @mp3_binary File.read!(Path.join([__DIR__, "../../../priv/sounds/call_beep.mp3"]))
+  # @mp3_binary File.read!(Path.join([__DIR__, "../../../priv/sounds/call_beep.mp3"]))
+  @mp3_binary ""
 
   def play, do: @mp3_binary
 
