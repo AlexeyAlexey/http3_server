@@ -23,10 +23,6 @@ erl_crash.dump
 http3_server-*.tar
 
 .env
-<<<<<<< HEAD
 draft.md
-=======
 .env.test
-
->>>>>>> 6a7242a (unified auth token format for one to one call and conference. Using conference stream format for one to one call. Removing phone call manager)
 
