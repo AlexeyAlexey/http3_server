@@ -6,8 +6,7 @@ defmodule Http3Server.ConnectionHandler do
   alias Wtransport.Session
   alias Wtransport.Connection
   alias Http3Server.AuthUserConnection
-  alias Http3Server.ConnectionHandlerErrorParser
-  alias Http3Server.PhoneCallManager
+  # alias Http3Server.ConnectionHandlerErrorParser
   alias Http3Server.SessionParameters
 
   # ConnectionHandler specific callbacks
@@ -69,27 +68,7 @@ defmodule Http3Server.ConnectionHandler do
   end
 
   @impl Wtransport.ConnectionHandler
-  def handle_error(reason, %Connection{} = _connection, %{type: "phone_call"} = state) do
-    ConnectionHandlerErrorParser.parse(reason)
-    |> case do
-      "user_ended_call" ->
-        Logger.info("user_ended_call #{state |> inspect()} reason: #{inspect(reason)}")
-
-        state
-        |> Map.put(:reason, "user_ended_call")
-        |> PhoneCallManager.user_ended_call()
-
-      _ ->
-        Logger.error("state: #{inspect(state)} reason: #{inspect(reason)}")
-
-        nil
-    end
-
-    :ok
-  end
-
-  @impl Wtransport.ConnectionHandler
-  def handle_error(reason, %Connection{} = _connection, %{type: "conference"} = state) do
+  def handle_error(reason, %Connection{} = _connection, state) do
     Logger.error("state: #{inspect(state)} reason: #{inspect(reason)}")
 
     :ok
