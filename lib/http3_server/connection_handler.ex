@@ -15,13 +15,6 @@ defmodule Http3Server.ConnectionHandler do
   def handle_session(%Session{} = session) do
     with {:ok, %{params: params}} <- SessionParameters.parse(session) do
       case AuthUserConnection.auth(params["auth_token"]) do
-        # {:ok, %{user_id: user_id, room_id: room_id}} ->
-        #   state = %{user_id: user_id, room_id: room_id, stream_type: stream_type}
-
-        #   Logger.info("user connecting: #{user_id} room_id: #{room_id} stream_type: #{stream_type}")
-
-        #   {:continue, state}
-
         {:ok,
          %{
            room_id: room_id,
