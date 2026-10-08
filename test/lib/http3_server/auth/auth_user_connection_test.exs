@@ -14,6 +14,7 @@ defmodule Http3Server.AuthUserConnectionTest do
         host: "local",
         room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
         participant_id: 123,
+        stream_type: "audio",
         custom_params: %{
           "id" => "id",
           "from" => "local@123",
@@ -89,6 +90,7 @@ defmodule Http3Server.AuthUserConnectionTest do
         host: "local",
         room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
         participant_id: 123,
+        stream_type: "audio",
         custom_params: %{
           "id" => "id",
           "conference_id" => 123,
@@ -126,7 +128,7 @@ defmodule Http3Server.AuthUserConnectionTest do
         )
 
       assert AuthUserConnection.auth(auth_token) ==
-               {:error, "auth token does not have required parameters"}
+               {:error, "room_id is reuired"}
     end
 
     test "participant_id is required parameter" do
@@ -149,7 +151,7 @@ defmodule Http3Server.AuthUserConnectionTest do
         )
 
       assert AuthUserConnection.auth(auth_token) ==
-               {:error, "auth token does not have required parameters"}
+               {:error, "participant_id is reuired"}
     end
 
     test "participant_id is not integer" do
@@ -172,7 +174,7 @@ defmodule Http3Server.AuthUserConnectionTest do
         )
 
       assert AuthUserConnection.auth(auth_token) ==
-               {:error, "auth token does not have required parameters"}
+               {:error, "participant_id is reuired"}
     end
   end
 end

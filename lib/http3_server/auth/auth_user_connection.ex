@@ -9,35 +9,31 @@ defmodule Http3Server.AuthUserConnection do
          {:ok, host} <- extract_host(auth_token),
          {:ok, public_key} <- get_public_key(host),
          {:ok, claims} <-
-           Http3Server.AuthToken.verify_token(auth_token, public_key) do
-      case claims do
-        %{
-          "room_id" => room_id,
-          "participant_id" => participant_id
-        } = params
-        when is_integer(participant_id) ->
-          {:ok,
-           %{
-             room_id: room_id,
-             custom_params: Map.get(params, "custom_params", %{}),
-             participant_id: participant_id
-           }}
-
-        _ ->
-          {:error, "auth token does not have required parameters"}
-      end
+           Http3Server.AuthToken.verify_token(auth_token, public_key),
+         {:ok, room_id} <- select_room_id(claims),
+         {:ok, participant_id} <- select_participant_id(claims),
+         {:ok, stream_type} <- select_stream_type(claims) do
+      {:ok,
+       %{
+         room_id: room_id,
+         participant_id: participant_id,
+         stream_type: stream_type,
+         custom_params: Map.get(claims, "custom_params", %{})
+       }}
     else
       {:error, :signature_error} ->
         {:error, "user cannot be authenticated"}
 
-      {:error, "host is not trusted"} ->
-        {:error, "host is not trusted"}
-
-      {:error, "public key cannot be fetched from host"} ->
-        {:error, "public key cannot be fetched from host"}
-
-      {:error, "auth token is required"} ->
-        {:error, "auth token is required"}
+      {:error, error}
+      when error in [
+             "host is not trusted",
+             "public key cannot be fetched from host",
+             "auth token is required",
+             "room_id is reuired",
+             "participant_id is reuired",
+             "stream_type is reuired"
+           ] ->
+        {:error, error}
 
       error ->
         inspect(error)
@@ -78,4 +74,23 @@ defmodule Http3Server.AuthUserConnection do
       {:ok, public_key}
     end
   end
+
+  defp select_room_id(%{"room_id" => room_id}) when is_binary(room_id) do
+    {:ok, room_id}
+  end
+
+  defp select_room_id(_), do: {:error, "room_id is reuired"}
+
+  defp select_participant_id(%{"participant_id" => participant_id})
+       when is_integer(participant_id) do
+    {:ok, participant_id}
+  end
+
+  defp select_participant_id(_), do: {:error, "participant_id is reuired"}
+
+  defp select_stream_type(%{"stream_type" => stream_type}) when is_binary(stream_type) do
+    {:ok, stream_type}
+  end
+
+  defp select_stream_type(_), do: {:error, "stream_type is reuired"}
 end

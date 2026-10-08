@@ -11,6 +11,7 @@ defmodule Http3Server.ConnectionHandlerTest do
         host: "local",
         room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
         participant_id: 123,
+        stream_type: "audio",
         custom_params: %{
           "id" => "id",
           "from" => "local@123",
@@ -49,6 +50,7 @@ defmodule Http3Server.ConnectionHandlerTest do
         host: "local",
         room_id: "phone_call:123e4567-e89b-12d3-a456-426614174000",
         participant_id: 123,
+        stream_type: "audio",
         custom_params: %{
           "id" => "id",
           "conference_id" => "XXXXXXXXXX",
