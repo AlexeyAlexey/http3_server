@@ -14,13 +14,14 @@ defmodule Http3Server.StreamHandler do
         } =
           state
       ) do
-    PubSub.subscribe(self(), room_id)
+    :ok = PubSub.subscribe(self(), room_id)
 
     {:continue,
      state
      |> Map.take([
        :room_id,
        :participant_id,
+       :stream_type,
        :custom_params
      ])
      |> Map.put(:package_handler, %{buffer: <<>>, leftover_bytes: 0})}
@@ -33,10 +34,12 @@ defmodule Http3Server.StreamHandler do
         %{
           room_id: room_id,
           participant_id: participant_id,
+          stream_type: stream_type,
           package_handler: package_handler
         } =
           state
-      ) do
+      )
+      when stream_type in ["video", "audio"] do
     if stream.stream_type == :bi do
       {parsed_data, buffer, leftover_bytes} =
         PackageHandler.expand_with(
@@ -53,10 +56,11 @@ defmodule Http3Server.StreamHandler do
 
       state = state |> Map.put(:package_handler, package_handler)
 
-      PubSub.publish(
-        room_id,
-        {:room_stream, self(), parsed_data}
-      )
+      :ok =
+        PubSub.publish(
+          room_id,
+          {:room_stream, self(), parsed_data}
+        )
 
       {:continue, state}
     else

@@ -19,11 +19,13 @@ defmodule Http3Server.ConnectionHandler do
          %{
            room_id: room_id,
            participant_id: participant_id,
+           stream_type: stream_type,
            custom_params: custom_params
          }} ->
           state = %{
             room_id: room_id,
             participant_id: participant_id,
+            stream_type: stream_type,
             custom_params: custom_params
           }
 

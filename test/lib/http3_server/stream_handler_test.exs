@@ -105,6 +105,7 @@ defmodule Http3Server.StreamHandlerTest do
       state = %{
         room_id: room_id = "conference:123e4567-e89b-12d3-a456-426614174000",
         participant_id: participant_id = 123,
+        stream_type: "audio",
         custom_params: %{
           "id" => "id",
           "conference_id" => "XXXXXXXXXX",
@@ -114,7 +115,7 @@ defmodule Http3Server.StreamHandlerTest do
         package_handler: %{buffer: <<>>, leftover_bytes: 0}
       }
 
-      PubSub.subscribe(self(), room_id)
+      :ok = PubSub.subscribe(self(), room_id)
 
       data = <<77, 83, 21::size(4)-unit(8), 3::8, "waiting_time_expired", 77, 83>>
 
@@ -125,7 +126,8 @@ defmodule Http3Server.StreamHandlerTest do
                |> Map.take([
                  :room_id,
                  :participant_id,
-                 :custom_params
+                 :custom_params,
+                 :stream_type
                ])
                |> Map.put(:package_handler, %{buffer: <<77, 83>>, leftover_bytes: 0})
 

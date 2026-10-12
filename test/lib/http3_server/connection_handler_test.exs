@@ -34,7 +34,7 @@ defmodule Http3Server.ConnectionHandlerTest do
 
       assert state ==
                data
-               |> Map.take([:room_id, :participant_id, :custom_params])
+               |> Map.take([:room_id, :participant_id, :custom_params, :stream_type])
     end
 
     test "auth token is required" do
@@ -71,7 +71,7 @@ defmodule Http3Server.ConnectionHandlerTest do
 
       assert state ==
                data
-               |> Map.take([:room_id, :participant_id, :custom_params])
+               |> Map.take([:room_id, :participant_id, :custom_params, :stream_type])
     end
 
     test "auth token is required" do
