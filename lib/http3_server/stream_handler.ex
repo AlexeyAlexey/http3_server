@@ -69,13 +69,51 @@ defmodule Http3Server.StreamHandler do
   end
 
   @impl Wtransport.StreamHandler
-  def handle_close(%Stream{} = stream, state) do
+  def handle_close(%Stream{} = stream, %{stream_type: stream_type} = state)
+      when stream_type in ["audio", "video"] do
     Logger.info("stream type: #{inspect(stream.stream_type)} state: #{inspect(state)}")
 
     case stream.stream_type do
       :bi -> {:continue, state}
       :uni -> :close
     end
+  end
+
+  @impl Wtransport.StreamHandler
+  def handle_error(
+        "not connected",
+        %Stream{} = stream,
+        %{room_id: room_id, stream_type: stream_type, participant_id: participant_id} = state
+      )
+      when stream_type == "event" do
+    payload_binary =
+      %{event_name: "participant_left", participant_id: participant_id} |> Jason.encode!()
+
+    payload_length = byte_size(payload_binary)
+    payload_type = 4
+
+    payload = <<payload_type::8, payload_length::size(4)-unit(8)>> <> payload_binary
+
+    binary_extension = <<participant_id::size(4)-unit(8)>>
+
+    extended_payload_length = byte_size(binary_extension) + byte_size(payload)
+
+    package =
+      <<"M", "S", "E", extended_payload_length::size(4)-unit(8), binary_extension::binary,
+        payload::binary>>
+
+    :ok =
+      PubSub.publish(
+        room_id,
+        {:room_stream, self(), package}
+      )
+
+    case stream.stream_type do
+      :bi -> {:continue, state}
+      :uni -> :close
+    end
+
+    :ok
   end
 
   @impl Wtransport.StreamHandler

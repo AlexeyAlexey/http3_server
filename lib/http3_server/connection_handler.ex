@@ -58,7 +58,9 @@ defmodule Http3Server.ConnectionHandler do
   end
 
   @impl Wtransport.ConnectionHandler
-  def handle_close(%Connection{} = _connection, _state) do
+  def handle_close(%Connection{} = _connection, state) do
+    Logger.info("state: #{inspect(state)}")
+
     :ok
   end
 
