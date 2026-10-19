@@ -137,6 +137,10 @@ defmodule Http3Server.StreamHandler do
     {:ok, package} =
       PackageEncoder.encode(:event, %{event_name: "participant_left"}, participant_id)
 
+    Logger.info(
+      "--------- handle_error not connected participant_id: #{participant_id} room_id: #{room_id}"
+    )
+
     :ok =
       PubSub.publish(
         room_id,
