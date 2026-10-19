@@ -10,13 +10,17 @@ if System.fetch_env!("MIX_ENV") == "dev" do
     stream_handler: Http3Server.StreamHandler,
     # log_network_data: true,
     level: :all,
-    level: :error,
+    # level: :error,
     default_formatter: [
       format: "$time ( $metadata) [$level] $message\n",
       metadata: [:mfa, :line]
     ]
 
   # config :joken, default_signer: System.fetch_env!("JWT_SECRET")
+
+  config :logger, :default_formatter,
+    format: "[$level] $metadata $message ",
+    metadata: [:error_code, :file, :line]
 else
   config :http3_server, :options,
     host: System.fetch_env!("HOST"),
