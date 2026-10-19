@@ -29,6 +29,8 @@ defmodule Http3Server.ConnectionHandler do
             custom_params: custom_params
           }
 
+          Logger.info("Connected: participant id: #{participant_id}; room_id: #{room_id}")
+
           {:continue, state}
 
         {:error, msg} ->

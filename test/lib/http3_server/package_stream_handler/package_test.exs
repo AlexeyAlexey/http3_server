@@ -138,4 +138,15 @@ defmodule Http3Server.PackageStreamHandler.PackageTest do
       assert leftover_bytes == 0
     end
   end
+
+  describe "buffer exceeds 0.5 Mb" do
+    test "buffer is dropped to init values" do
+      oversized_buffer = :binary.copy(<<0>>, 512 * 1024 + 1)
+      stream = <<77, 83, 0, 0, 0, 0>>
+      binary_extension = <<123::size(4)-unit(8)>>
+
+      assert {<<77, 83, 69, 4::size(4)-unit(8), ^binary_extension::binary>>, <<>>, 0} =
+               Package.expand_with(stream, binary_extension, oversized_buffer, 999_999)
+    end
+  end
 end

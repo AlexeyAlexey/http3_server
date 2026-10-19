@@ -4,6 +4,8 @@ defmodule Http3Server.StreamHandler do
 
   alias Wtransport.Stream
   alias Http3Server.PackageStreamHandler.Package, as: PackageHandler
+  alias Http3Server.PackageStreamHandler.PackageDecoder
+  alias Http3Server.PackageStreamHandler.PackageEncoder
 
   def handle_stream(
         %Stream{} = _stream,
@@ -56,11 +58,57 @@ defmodule Http3Server.StreamHandler do
 
       state = state |> Map.put(:package_handler, package_handler)
 
-      :ok =
-        PubSub.publish(
-          room_id,
-          {:room_stream, self(), parsed_data}
-        )
+      if byte_size(parsed_data) > 0 do
+        :ok =
+          PubSub.publish(
+            room_id,
+            {:room_stream, self(), parsed_data}
+          )
+      end
+
+      # :ok =
+      #   PubSub.publish(
+      #     room_id,
+      #     {:room_stream, self(), parsed_data}
+      #   )
+
+      {:continue, state}
+    else
+      {:continue, state}
+    end
+  end
+
+  @impl Wtransport.StreamHandler
+  def handle_data(
+        data,
+        %Stream{} = stream,
+        %{
+          room_id: _room_id,
+          participant_id: _participant_id,
+          stream_type: stream_type,
+          package_handler: package_handler
+        } =
+          state
+      )
+      when stream_type == "event" do
+    if stream.stream_type == :bi do
+      # TODO Implement
+      {decoded_package, buffer, leftover_bytes} =
+        PackageDecoder.decode(data, package_handler[:buffer], package_handler[:leftover_bytes])
+
+      package_handler =
+        package_handler
+        |> Map.put(:buffer, buffer)
+        |> Map.put(:leftover_bytes, leftover_bytes)
+
+      state = state |> Map.put(:package_handler, package_handler)
+
+      if byte_size(decoded_package) > 0 do
+        Http3Server.PackageStreamHandler.PackageParser.parse(decoded_package)
+        # |> IO.inspect(label: "-----------------")
+      end
+
+      Logger.info("Event")
 
       {:continue, state}
     else
@@ -86,21 +134,8 @@ defmodule Http3Server.StreamHandler do
         %{room_id: room_id, stream_type: stream_type, participant_id: participant_id} = state
       )
       when stream_type == "event" do
-    payload_binary =
-      %{event_name: "participant_left", participant_id: participant_id} |> Jason.encode!()
-
-    payload_length = byte_size(payload_binary)
-    payload_type = 4
-
-    payload = <<payload_type::8, payload_length::size(4)-unit(8)>> <> payload_binary
-
-    binary_extension = <<participant_id::size(4)-unit(8)>>
-
-    extended_payload_length = byte_size(binary_extension) + byte_size(payload)
-
-    package =
-      <<"M", "S", "E", extended_payload_length::size(4)-unit(8), binary_extension::binary,
-        payload::binary>>
+    {:ok, package} =
+      PackageEncoder.encode(:event, %{event_name: "participant_left"}, participant_id)
 
     :ok =
       PubSub.publish(
