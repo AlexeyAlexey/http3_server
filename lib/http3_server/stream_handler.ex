@@ -5,7 +5,7 @@ defmodule Http3Server.StreamHandler do
   alias Wtransport.Stream
   alias Http3Server.PackageStreamHandler.Package, as: PackageHandler
   alias Http3Server.PackageStreamHandler.PackageDecoder
-  alias Http3Server.PackageStreamHandler.PackageEncoder
+  # alias Http3Server.PackageStreamHandler.PackageEncoder
 
   def handle_stream(
         %Stream{} = _stream,
@@ -125,34 +125,6 @@ defmodule Http3Server.StreamHandler do
       :bi -> {:continue, state}
       :uni -> :close
     end
-  end
-
-  @impl Wtransport.StreamHandler
-  def handle_error(
-        "not connected",
-        %Stream{} = stream,
-        %{room_id: room_id, stream_type: stream_type, participant_id: participant_id} = state
-      )
-      when stream_type == "event" do
-    {:ok, package} =
-      PackageEncoder.encode(:event, %{event_name: "participant_left"}, participant_id)
-
-    Logger.info(
-      "--------- handle_error not connected participant_id: #{participant_id} room_id: #{room_id}"
-    )
-
-    :ok =
-      PubSub.publish(
-        room_id,
-        {:room_stream, self(), package}
-      )
-
-    case stream.stream_type do
-      :bi -> {:continue, state}
-      :uni -> :close
-    end
-
-    :ok
   end
 
   @impl Wtransport.StreamHandler

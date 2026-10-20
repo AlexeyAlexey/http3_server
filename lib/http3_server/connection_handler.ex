@@ -8,6 +8,7 @@ defmodule Http3Server.ConnectionHandler do
   alias Http3Server.AuthUserConnection
   # alias Http3Server.ConnectionHandlerErrorParser
   alias Http3Server.SessionParameters
+  alias Http3Server.PackageStreamHandler.PackageEncoder
 
   # ConnectionHandler specific callbacks
 
@@ -62,6 +63,31 @@ defmodule Http3Server.ConnectionHandler do
   @impl Wtransport.ConnectionHandler
   def handle_close(%Connection{} = _connection, state) do
     Logger.info("state: #{inspect(state)}")
+
+    :ok
+  end
+
+  @impl Wtransport.ConnectionHandler
+  def handle_error(
+        reason,
+        %Connection{} = _connection,
+        %{room_id: room_id, stream_type: stream_type, participant_id: participant_id} = state
+      )
+      when stream_type == "event" do
+    Logger.error("state: #{inspect(state)} reason: #{inspect(reason)}")
+
+    if reason =~ "connection closed" do
+      {:ok, package} =
+        PackageEncoder.encode(:event, %{event_name: "participant_left"}, participant_id)
+
+      Logger.error("state: #{inspect(state)} reason: #{inspect(reason)}")
+
+      :ok =
+        PubSub.publish(
+          room_id,
+          {:room_stream, self(), package}
+        )
+    end
 
     :ok
   end
