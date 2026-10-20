@@ -102,4 +102,6 @@ EXPOSE 4433/udp
 # above and adding an entrypoint. See https://github.com/krallin/tini for details
 # ENTRYPOINT ["/tini", "--"]
 
-CMD ["bin/http3_server", "start"]
+# CMD ["bin/http3_server", "start"]
+CMD ["/app/bin/server"]
+
