@@ -68,13 +68,13 @@ defmodule Http3Server.StreamHandler do
       |> Map.put(:package_handler, package_handler)
 
     state =
-      if stream_type == "video" do
+      if stream_type in ["video", "audio"] do
         StreamHeandlerHealthCheck.update(state)
       else
         state
       end
 
-    if stream_type == "video" && StreamHeandlerHealthCheck.is_updated(state) do
+    if stream_type in ["video", "audio"] && StreamHeandlerHealthCheck.is_updated(state) do
       Logger.info(
         "health check: #{StreamHeandlerHealthCheck.log_format(state)}; participant id: #{participant_id}; stream_type: #{stream_type};"
       )

@@ -124,7 +124,12 @@ defmodule Http3Server.StreamHandlerTest do
           "type" => "phone_call"
         },
         package_handler: %{buffer: <<>>, leftover_bytes: 0},
-        health_check: %{call_counter: 0, speed: 0, start_time: ~U[2026-10-20 14:15:52.616604Z]}
+        health_check: %{
+          call_counter: 0,
+          speed: 0,
+          start_time: ~U[2026-10-20 14:15:52.616604Z],
+          logged_at: ~U[2026-10-20 14:15:52.616604Z]
+        }
       }
 
       :ok = PubSub.subscribe(self(), room_id)
