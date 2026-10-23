@@ -76,7 +76,7 @@ defmodule Http3Server.StreamHandler do
 
     if stream_type in ["video", "audio"] && StreamHeandlerHealthCheck.is_updated(state) do
       Logger.info(
-        "health check: #{StreamHeandlerHealthCheck.log_format(state)}; participant id: #{participant_id}; stream_type: #{stream_type};"
+        "health check: #{StreamHeandlerHealthCheck.log_format(state)}; send to to participant id: #{participant_id}; stream_type: #{stream_type};"
       )
     end
 
